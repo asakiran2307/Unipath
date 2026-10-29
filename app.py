@@ -208,6 +208,15 @@ def index():
     return render_template("landing.html", stats=stats, featured=featured_opps)
 
 
+@app.route("/api/debug")
+def debug_route():
+    return jsonify({
+        "path": request.path,
+        "query": request.query_string.decode("utf-8", "ignore"),
+        "environ_path_info": request.environ.get("PATH_INFO"),
+        "headers": dict(request.headers)
+    })
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if session.get("user_id"):
