@@ -53,6 +53,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Jinja enumerate filter
 app.jinja_env.filters['enumerate'] = enumerate
+app.url_map.strict_slashes = False
 
 # Auto-initialize database on startup (crucial for Serverless / Vercel deployment)
 try:
@@ -187,6 +188,8 @@ def inject_globals():
 # ─── Public Routes ────────────────────────────────────────────────────────────
 
 @app.route("/")
+@app.route("/api/index")
+@app.route("/api/index.py")
 def index():
     if session.get("user_id"):
         user = current_user()
