@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Page Not Found{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div class="bg-orb orb1"></div>
+  <div class="error-inner">
+    <div class="error-code">404</div>
+    <h1>Page not found</h1>
+    <p>The page you're looking for doesn't exist or you don't have permission to view it.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">← Back to Home</a>
+  </div>
+</div>
+{% endblock %}

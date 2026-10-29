@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}My Learning Path{% endblock %}
+
+{% block content %}
+<div class="learning-path-page" style="padding: 3rem 1.5rem; max-width: 900px; margin: 0 auto; min-height: 80vh;">
+  <div class="bg-orb orb2"></div>
+  <div class="lp-header" style="text-align: center; margin-bottom: 3.5rem;">
+    <h1 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem;">🚀 Your AI Learning Path</h1>
+    <p style="color: var(--text2); font-size: 1.05rem; max-width: 600px; margin: 0 auto;">
+      Based on your resume skills ({{ profile.get('skills', [])|length }} identified), Gemini AI generated this personalized roadmap to optimize your tech career trajectory.
+    </p>
+  </div>
+
+  {% if roadmap %}
+  <div class="lp-timeline">
+    {% for step in roadmap %}
+    <div class="lp-step">
+      <div class="lp-step-number">{{ step.step }}</div>
+      <div class="lp-step-content">
+        <div class="lp-step-header">
+          <h3 class="lp-step-title">{{ step.title }}</h3>
+          <span class="lp-step-duration">{{ step.duration }}</span>
+        </div>
+        <p class="lp-step-desc">{{ step.description }}</p>
+        <div class="lp-step-resource">
+          <span style="font-weight:700; color:var(--text3);">📌 Suggested Resource:</span> 
+          <span style="color:var(--text);">{{ step.resource }}</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state" style="text-align:center; padding: 4rem; border: 1px dashed var(--border); border-radius: var(--radius);">
+    <h3>Learning Path not generated</h3>
+    <p style="color: var(--text2);">We couldn't generate a roadmap based on the provided skills.</p>
+  </div>
+  {% endif %}
+
+  <div class="lp-actions" style="margin-top: 4rem; text-align: center; border-top: 1px solid var(--border); padding-top: 3rem;">
+    <h3 style="margin-bottom: 1rem; font-size: 1.25rem;">Next Step: Skill Verification</h3>
+    <p style="color: var(--text2); margin-bottom: 1.5rem; max-width: 500px; margin-inline: auto;">
+      Now that you have your roadmap, take the initial benchmark quiz. Your performance helps us tune your Opportunity Feed.
+    </p>
+    <a href="{{ url_for('student_quiz') }}" class="btn btn-primary btn-xl" style="padding: 1rem 3rem;">
+      Take Verification Quiz →
+    </a>
+  </div>
+
+</div>
+{% endblock %}

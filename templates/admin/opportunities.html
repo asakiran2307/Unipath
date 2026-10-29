@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Admin — All Opportunities{% endblock %}
+{% block content %}
+<div class="admin-page">
+  <div class="admin-header">
+    <div>
+      <h1>📋 All Opportunities</h1>
+      <p>{{ opportunities|length }} listings (status: {{ active_status }})</p>
+    </div>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-ghost">← Dashboard</a>
+  </div>
+  <div class="status-tabs">
+    <a href="?status=approved" class="status-tab {% if active_status == 'approved' %}active{% endif %}">✅ Approved</a>
+    <a href="?status=pending" class="status-tab {% if active_status == 'pending' %}active{% endif %}">⏳ Pending</a>
+    <a href="?status=rejected" class="status-tab {% if active_status == 'rejected' %}active{% endif %}">❌ Rejected</a>
+  </div>
+  {% if opportunities %}
+  <div class="listings-table-wrap">
+    <table class="listings-table">
+      <thead>
+        <tr><th>Title</th><th>Category</th><th>Source</th><th>Reward</th><th>Deadline</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for opp in opportunities %}
+        <tr>
+          <td>
+            <div class="table-title">{{ opp.title[:60] }}</div>
+            <div class="table-sub">{{ opp.company }}</div>
+          </td>
+          <td><span class="cat-badge cat-{{ opp.category }}">{{ opp.category | title }}</span></td>
+          <td><small>{{ opp.source }}</small></td>
+          <td class="table-reward">{{ opp.reward[:35] }}</td>
+          <td>
+            {% if opp.deadline %}<span class="chip-{{ opp.deadline_color }}">{{ opp.deadline_label }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td><span class="status-badge status-{{ opp.status }}">{{ opp.status }}</span></td>
+          <td class="table-actions">
+            {% if opp.status != 'approved' %}
+            <form method="POST" action="{{ url_for('admin_approve', opp_id=opp.id) }}" style="display:inline">
+              <button class="btn-xs btn-green">✅</button>
+            </form>
+            {% endif %}
+            {% if opp.status != 'rejected' %}
+            <form method="POST" action="{{ url_for('admin_reject', opp_id=opp.id) }}" style="display:inline">
+              <button class="btn-xs btn-amber">❌</button>
+            </form>
+            {% endif %}
+            <form method="POST" action="{{ url_for('admin_feature', opp_id=opp.id) }}" style="display:inline">
+              <button class="btn-xs">⭐</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin_delete', opp_id=opp.id) }}" style="display:inline"
+                  onsubmit="return confirm('Delete permanently?')">
+              <button class="btn-xs btn-red">🗑️</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><div class="empty-icon">📋</div><h3>No opportunities in this status.</h3></div>
+  {% endif %}
+</div>
+{% endblock %}

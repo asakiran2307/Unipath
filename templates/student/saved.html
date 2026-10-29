@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Saved Opportunities{% endblock %}
+
+{% block content %}
+<div class="saved-page">
+  <div class="page-header-centered">
+    <h1>💾 Saved Opportunities</h1>
+    <p>{{ opportunities|length }} saved • Never miss a deadline</p>
+  </div>
+
+  {% if not opportunities %}
+  <div class="empty-state">
+    <div class="empty-icon">🔖</div>
+    <h3>Nothing saved yet</h3>
+    <p>Browse the feed and hit 🔖 to save opportunities you like</p>
+    <a href="{{ url_for('student_feed') }}" class="btn btn-primary">Browse Feed →</a>
+  </div>
+  {% else %}
+  <div class="saved-grid">
+    {% for opp in opportunities %}
+    <div class="opp-card category-{{ opp.category }}">
+      <div class="card-top">
+        <div class="card-badges">
+          <span class="cat-badge cat-{{ opp.category }}">{{ opp.category | title }}</span>
+          {% if opp.reward_type == 'cash' %}<span class="reward-badge reward-cash">💰 Cash</span>
+          {% elif opp.reward_type == 'stipend' %}<span class="reward-badge reward-stipend">💼 Stipend</span>
+          {% else %}<span class="reward-badge reward-cert">🏅 Cert</span>{% endif %}
+        </div>
+        {% if opp.days_left is not none %}
+        <div class="deadline-chip chip-{{ opp.deadline_color }}">⏰ {{ opp.deadline_label }}</div>
+        {% endif %}
+      </div>
+      <h3 class="card-title">{{ opp.title }}</h3>
+      <div class="card-company">🏢 {{ opp.company or opp.source }}</div>
+      <div class="card-reward-value">{{ opp.reward }}</div>
+      {% if opp.tags %}
+      <div class="card-tags">{% for tag in opp.tags[:4] %}<span class="tag">{{ tag }}</span>{% endfor %}</div>
+      {% endif %}
+      <div class="card-footer">
+        <div class="countdown-display" data-deadline="{{ opp.deadline or '' }}">
+          {% if opp.deadline %}Loading…{% else %}No deadline{% endif %}
+        </div>
+        <div class="card-footer-actions">
+          <button class="btn btn-ghost btn-sm" onclick="toggleSave('{{ opp.id }}', this)">🗑️ Remove</button>
+          <a href="{{ opp.apply_link }}" target="_blank" class="card-apply-btn">Apply →</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function toggleSave(id, btn) {
+  await fetch(`/student/save/${id}`, {method:'POST'});
+  btn.closest('.opp-card').style.opacity = '0';
+  setTimeout(() => btn.closest('.opp-card').remove(), 400);
+}
+function updateCountdowns() {
+  document.querySelectorAll('.countdown-display[data-deadline]').forEach(el => {
+    if (!el.dataset.deadline) return;
+    const dl = new Date(el.dataset.deadline + 'T23:59:59');
+    const diff = dl - new Date();
+    if (diff <= 0) { el.textContent = '⏰ Deadline passed'; return; }
+    const days = Math.floor(diff / 86400000);
+    el.textContent = `⏳ ${days} day${days !== 1 ? 's' : ''} remaining`;
+  });
+}
+updateCountdowns();
+setInterval(updateCountdowns, 60000);
+</script>
+{% endblock %}

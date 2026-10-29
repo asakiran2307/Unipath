@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Admin — User Management{% endblock %}
+{% block content %}
+<div class="admin-page">
+  <div class="admin-header">
+    <div>
+      <h1>👥 User Management</h1>
+      <p>{{ users|length }} registered accounts</p>
+    </div>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-ghost">← Dashboard</a>
+  </div>
+
+  <div class="listings-table-wrap">
+    <table class="listings-table">
+      <thead>
+        <tr><th>User</th><th>Role</th><th>Organization</th><th>Joined</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="{% if not u.is_active %}row-disabled{% endif %}">
+          <td>
+            <div class="table-title">{{ u.name }}</div>
+            <div class="table-sub">{{ u.email }}</div>
+          </td>
+          <td><span class="user-role-badge role-{{ u.role }}">{{ role_labels[u.role] }}</span></td>
+          <td>{{ u.organization or '—' }}</td>
+          <td><small>{{ u.created_at[:10] }}</small></td>
+          <td>
+            {% if u.is_active %}
+              <span class="log-status log-success">✅ Active</span>
+            {% else %}
+              <span class="log-status" style="color:#ef4444">🚫 Suspended</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.role != 'admin' %}
+            <form method="POST" action="{{ url_for('admin_toggle_user', user_id=u.id) }}"
+                  onsubmit="return confirm('Toggle user status?')">
+              <button class="btn-xs {% if u.is_active %}btn-amber{% else %}btn-green{% endif %}">
+                {% if u.is_active %}🚫 Suspend{% else %}✅ Activate{% endif %}
+              </button>
+            </form>
+            {% else %}
+            <span class="table-sub">Protected</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

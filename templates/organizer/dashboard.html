@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Organizer Dashboard{% endblock %}
+{% block content %}
+<div class="dashboard-page">
+  <div class="bg-orb orb1"></div>
+  <div class="dash-header">
+    <div>
+      <h1>📅 Event Organizer Dashboard</h1>
+      <p>{{ user.organization or user.name }} — Manage your events &amp; hackathons</p>
+    </div>
+    <a href="{{ url_for('organizer_new') }}" class="btn btn-primary">+ Post New Event</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="dash-stats">
+    <div class="stat-card"><div class="stat-num-lg">{{ stats.total }}</div><div class="stat-label">Total Posted</div></div>
+    <div class="stat-card stat-green"><div class="stat-num-lg">{{ stats.approved }}</div><div class="stat-label">Live ✅</div></div>
+    <div class="stat-card stat-amber"><div class="stat-num-lg">{{ stats.pending }}</div><div class="stat-label">Under Review ⏳</div></div>
+    <div class="stat-card stat-red"><div class="stat-num-lg">{{ stats.rejected }}</div><div class="stat-label">Rejected ❌</div></div>
+  </div>
+
+  <!-- Status info -->
+  {% if stats.pending > 0 %}
+  <div class="info-banner">
+    ⏳ You have {{ stats.pending }} event(s) waiting for admin approval. We'll notify you once reviewed.
+  </div>
+  {% endif %}
+
+  <!-- Events list -->
+  {% if not opportunities %}
+  <div class="empty-state">
+    <div class="empty-icon">📅</div>
+    <h3>No events posted yet</h3>
+    <p>Post your first hackathon or event</p>
+    <a href="{{ url_for('organizer_new') }}" class="btn btn-primary">+ Post Event</a>
+  </div>
+  {% else %}
+  <div class="listings-table-wrap">
+    <table class="listings-table">
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Category</th>
+          <th>Reward</th>
+          <th>Deadline</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for opp in opportunities %}
+        <tr>
+          <td>
+            <div class="table-title">{{ opp.title }}</div>
+            <div class="table-sub">{{ opp.company }}</div>
+          </td>
+          <td><span class="cat-badge cat-{{ opp.category }}">{{ opp.category | title }}</span></td>
+          <td class="table-reward">{{ opp.reward[:40] }}</td>
+          <td>
+            {% if opp.deadline %}
+              <span class="chip-{{ opp.deadline_color }}">{{ opp.deadline_label }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <span class="status-badge status-{{ opp.status }}">
+              {% if opp.status == 'approved' %}✅ Live
+              {% elif opp.status == 'pending' %}⏳ Review
+              {% else %}❌ Rejected{% endif %}
+            </span>
+          </td>
+          <td>
+            {% if opp.status == 'approved' %}
+              <a href="{{ opp.apply_link }}" target="_blank" class="table-action-link">View →</a>
+            {% endif %}
+            <form method="POST" action="{{ url_for('organizer_delete', opp_id=opp.id) }}"
+                  style="display:inline" onsubmit="return confirm('Delete this event?')">
+              <button class="table-action-del">🗑️</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

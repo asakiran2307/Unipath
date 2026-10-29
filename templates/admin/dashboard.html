@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% block title %}Admin Control Center{% endblock %}
+{% block content %}
+<div class="admin-page">
+  <div class="bg-orb orb1"></div>
+  <div class="admin-header">
+    <div>
+      <h1>🛡️ Admin Control Center</h1>
+      <p class="admin-subtitle">Platform overview — everything in one place</p>
+    </div>
+    <div class="admin-header-actions">
+      <a href="{{ url_for('admin_users') }}" class="btn btn-ghost">👥 Manage Users</a>
+    </div>
+  </div>
+
+  <!-- ── Live Scrape Panel ─────────────────────────────────────────────────── -->
+  <div class="scrape-panel" id="scrapePanel">
+    <div class="scrape-panel-header">
+      <div>
+        <h2 style="font-size:1.05rem;font-weight:800;margin:0">🔄 Scrape Opportunities</h2>
+        <p style="color:var(--text2);font-size:.82rem;margin:.25rem 0 0">
+          Click a button — results appear here instantly.
+        </p>
+      </div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+        <button class="btn btn-primary" id="btnCore" onclick="runScrape('core')">
+          🌐 Core Scrapers
+        </button>
+        <button class="btn btn-ghost" id="btnSocial" onclick="runScrape('social')">
+          📡 Social (IG + LinkedIn)
+        </button>
+        <button class="btn btn-ghost" id="btnAll" onclick="runScrape('all')">
+          ⚡ Run All
+        </button>
+      </div>
+    </div>
+
+    <!-- Progress / Results area -->
+    <div id="scrapeStatus" style="display:none;margin-top:1.25rem">
+      <div id="scrapeSpinner" class="scrape-spinner">
+        <div class="spin-ring"></div>
+        <span id="scrapeMsg">Running scrapers…</span>
+      </div>
+      <div id="scrapeResults" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Platform Stats -->
+  <div class="admin-stats-grid">
+    <div class="admin-stat-card">
+      <div class="as-icon" style="background:var(--accent)">🏆</div>
+      <div class="as-val">{{ stats.hackathons }}</div>
+      <div class="as-label">Hackathons</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="as-icon" style="background:linear-gradient(135deg,#10b981,#06b6d4)">💼</div>
+      <div class="as-val">{{ stats.internships }}</div>
+      <div class="as-label">Internships</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="as-icon" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">🎓</div>
+      <div class="as-val">{{ stats.scholarships }}</div>
+      <div class="as-label">Scholarships</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="as-icon" style="background:linear-gradient(135deg,var(--cyan),var(--accent))">🔧</div>
+      <div class="as-val">{{ stats.workshops }}</div>
+      <div class="as-label">Workshops</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="as-icon" style="background:linear-gradient(135deg,var(--accent2),var(--emerald))">👤</div>
+      <div class="as-val">{{ stats.total_users }}</div>
+      <div class="as-label">Students</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="as-icon" style="background:linear-gradient(135deg,var(--amber),var(--accent2))">⏳</div>
+      <div class="as-val {% if stats.pending_count > 0 %}pending-highlight{% endif %}">{{ stats.pending_count }}</div>
+      <div class="as-label">Pending Review</div>
+    </div>
+  </div>
+
+  <!-- Pending Approvals -->
+  {% if pending %}
+  <div class="admin-section">
+    <div class="section-head">
+      <h2>⏳ Pending Approval ({{ pending|length }})</h2>
+      <p>Review and approve listings from organizers and recruiters</p>
+    </div>
+    <div class="pending-cards">
+      {% for opp in pending %}
+      <div class="pending-card">
+        <div class="pending-top">
+          <div>
+            <span class="cat-badge cat-{{ opp.category }}">{{ opp.category | title }}</span>
+            {% if opp.reward_type == 'cash' %}<span class="reward-badge reward-cash">💰 Cash</span>{% endif %}
+          </div>
+          <div class="pending-submitter">
+            Submitted by: {{ opp.poster_name or 'Unknown' }} ({{ opp.poster_email or '—' }})
+          </div>
+        </div>
+        <h3 class="pending-title">{{ opp.title }}</h3>
+        <div class="pending-meta">
+          <span>🏢 {{ opp.company }}</span>
+          <span>📍 {{ opp.location }}</span>
+          <span>💰 {{ opp.reward }}</span>
+        </div>
+        <p class="pending-desc">{{ opp.description[:200] }}{% if opp.description|length > 200 %}…{% endif %}</p>
+        <div class="pending-eligibility">👤 {{ opp.eligibility }}</div>
+        {% if opp.apply_link %}
+        <div class="pending-link"><a href="{{ opp.apply_link }}" target="_blank" rel="noopener">🔗 {{
+            opp.apply_link[:60] }}{% if opp.apply_link|length > 60 %}…{% endif %}</a></div>
+        {% endif %}
+        <div class="pending-actions">
+          <form method="POST" action="{{ url_for('admin_approve', opp_id=opp.id) }}" style="display:inline">
+            <button class="btn btn-approve">✅ Approve & Publish</button>
+          </form>
+          <form method="POST" action="{{ url_for('admin_reject', opp_id=opp.id) }}" style="display:inline">
+            <button class="btn btn-reject">❌ Reject</button>
+          </form>
+          <form method="POST" action="{{ url_for('admin_feature', opp_id=opp.id) }}" style="display:inline">
+            <button class="btn btn-ghost btn-sm">⭐ Feature</button>
+          </form>
+          <form method="POST" action="{{ url_for('admin_delete', opp_id=opp.id) }}" style="display:inline"
+            onsubmit="return confirm('Permanently delete?')">
+            <button class="btn btn-danger-sm">🗑️ Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="admin-section">
+    <div class="info-banner info-green">✅ No pending listings — you're all caught up!</div>
+  </div>
+  {% endif %}
+
+  <!-- Scrape Logs -->
+  <div class="admin-section">
+    <div class="section-head">
+      <h2>📡 Scraper Activity Log</h2>
+      <p>Last 20 automated scrape operations</p>
+    </div>
+    {% if logs %}
+    <div class="log-table-wrap">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Status</th>
+            <th>New</th>
+            <th>Duplicates</th>
+            <th>Error</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr class="log-row-{{ log.status }}">
+            <td><strong>{{ log.source }}</strong></td>
+            <td>
+              <span class="log-status log-{{ log.status }}">
+                {% if log.status == 'success' %}✅ success{% else %}❌ error{% endif %}
+              </span>
+            </td>
+            <td class="log-new">+{{ log.count_new }}</td>
+            <td class="log-dup">{{ log.count_duplicate }}</td>
+            <td class="log-error">{{ log.error[:50] if log.error else '—' }}</td>
+            <td class="log-time">{{ log.ran_at[:16] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="info-banner">No scrape logs yet. Click "Trigger Scrape Now" to start.</div>
+    {% endif %}
+  </div>
+  <!-- ── Ads / Revenue Management ─────────────────────────────────────────────────── -->
+  <div class="admin-section" id="ads">
+    <div class="admin-section-header">
+      <h2>💸 Revenue & Ads Management</h2>
+    </div>
+
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:flex-start">
+      <!-- Create Ad Form -->
+      <div class="admin-card"
+        style="flex:1;min-width:300px;border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem">
+        <h3 style="font-size:1.1rem;margin:0 0 1rem;">Create New Ad Campaign</h3>
+        <form action="{{ url_for('admin_create_ad') }}" method="POST"
+          style="display:flex;flex-direction:column;gap:1rem;">
+          <div>
+            <label style="font-weight:700;font-size:0.8rem;color:var(--text2)">Ad Title</label>
+            <input type="text" name="title" class="input" placeholder="e.g. Cisco Internship Program" required />
+          </div>
+          <div>
+            <label style="font-weight:700;font-size:0.8rem;color:var(--text2)">Banner Image URL</label>
+            <input type="url" name="image_url" class="input" placeholder="https://example.com/banner.jpg" required />
+          </div>
+          <div>
+            <label style="font-weight:700;font-size:0.8rem;color:var(--text2)">Target Link</label>
+            <input type="url" name="target_link" class="input" placeholder="https://internships.cisco.com..."
+              required />
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top:.5rem">Create & Pending Approval</button>
+        </form>
+      </div>
+
+      <!-- Manage Existing Ads -->
+      <div style="flex:2;min-width:400px;">
+        {% if ads %}
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Ad Title</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ad in ads %}
+            <tr>
+              <td>
+                <div style="font-weight:700">{{ ad.title }}</div>
+                <div style="font-size:0.75rem;color:var(--text2)"><a href="{{ ad.target_link }}" target="_blank"
+                    style="color:var(--accent)">View Link ↗</a></div>
+              </td>
+              <td>
+                <span class="status-badge status-{{ ad.status }}"
+                  style="padding:.2rem .5rem;border-radius:4px;font-size:.7rem;text-transform:uppercase;font-weight:800;">
+                  {{ ad.status }}
+                </span>
+              </td>
+              <td>
+                <div style="display:flex;gap:.5rem">
+                  {% if ad.status != 'approved' %}
+                  <form action="{{ url_for('admin_toggle_ad', ad_id=ad.id) }}" method="POST">
+                    <input type="hidden" name="status" value="approved">
+                    <button type="submit" class="btn btn-sm btn-green" title="Approve">✅</button>
+                  </form>
+                  {% endif %}
+                  {% if ad.status != 'rejected' %}
+                  <form action="{{ url_for('admin_toggle_ad', ad_id=ad.id) }}" method="POST">
+                    <input type="hidden" name="status" value="rejected">
+                    <button type="submit" class="btn btn-sm btn-ghost" title="Reject"
+                      style="color:var(--red)">❌</button>
+                  </form>
+                  {% endif %}
+                  <form action="{{ url_for('admin_delete_ad', ad_id=ad.id) }}" method="POST"
+                    onsubmit="return confirm('Delete this ad completely?');">
+                    <button type="submit" class="btn btn-sm btn-ghost" title="Delete"
+                      style="color:var(--red)">🗑️</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state"
+          style="padding:2rem;text-align:center;border:1px dashed var(--border);border-radius:var(--radius);color:var(--text2)">
+          No ads have been submitted yet.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <!-- Quick nav -->
+  <div class="admin-section">
+    <div class="admin-quick-nav">
+      <a href="{{ url_for('admin_opportunities') }}?status=approved" class="admin-nav-card">
+        <span>📋</span><strong>All Opportunities</strong><small>Browse full catalog</small>
+      </a>
+      <a href="{{ url_for('admin_users') }}" class="admin-nav-card">
+        <span>👥</span><strong>Manage Users</strong><small>Ban, activate accounts</small>
+      </a>
+      <a href="{{ url_for('admin_opportunities') }}?status=pending" class="admin-nav-card">
+        <span>⏳</span><strong>Pending Queue</strong><small>{{ stats.pending_count }} waiting</small>
+      </a>
+      <a href="{{ url_for('admin_social') }}" class="admin-nav-card">
+        <span>📡</span><strong>Social Scrapers</strong><small>Instagram · LinkedIn · News RSS</small>
+      </a>
+      <a href="{{ url_for('api_stats') }}" target="_blank" class="admin-nav-card">
+        <span>📊</span><strong>API Stats</strong><small>Live JSON data</small>
+      </a>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+  const SCRAPE_URL = "{{ url_for('admin_scrape') }}";
+
+  function runScrape(type) {
+    // Disable all buttons
+    ['btnCore', 'btnSocial', 'btnAll'].forEach(id => {
+      const b = document.getElementById(id);
+      b.disabled = true;
+      b.style.opacity = '0.5';
+    });
+    const scrapeStatus = document.getElementById('scrapeStatus');
+    const spinner = document.getElementById('scrapeSpinner');
+    const results = document.getElementById('scrapeResults');
+    const msg = document.getElementById('scrapeMsg');
+
+    const labels = {
+      core: 'Running core scrapers (Unstop, Devfolio, MLH, Internshala, News RSS)…',
+      social: 'Running social scrapers (Instagram, LinkedIn)…',
+      all: 'Running ALL scrapers — this may take 30-60 seconds…',
+    };
+    msg.textContent = labels[type] || 'Running…';
+    scrapeStatus.style.display = 'block';
+    spinner.style.display = 'flex';
+    results.style.display = 'none';
+    results.innerHTML = '';
+
+    // Scroll to scrape panel
+    document.getElementById('scrapePanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const fd = new FormData();
+    fd.append('type', type);
+
+    fetch(SCRAPE_URL, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+      },
+      body: fd,
+    })
+      .then(async r => {
+        // If the server redirected us (e.g. to login) or returned an error, capture it safely
+        const isJson = r.headers.get("content-type")?.includes("application/json");
+        if (!r.ok || !isJson) {
+          const text = await r.text();
+          // Throw a clean error message rather than a generic JSON parse error
+          if (text.includes("<title>Login")) throw new Error("Session expired. Please log in again.");
+          throw new Error(`Server returned a non-JSON response. HTTP ${r.status}.`);
+        }
+        return r.json();
+      })
+      .then(data => {
+        spinner.style.display = 'none';
+        results.style.display = 'block';
+
+        // Summary banner
+        const totalNew = data.total_new || 0;
+        const bannerColor = totalNew > 0 ? 'var(--emerald)' : 'var(--text2)';
+        let html = `<div class="scrape-summary" style="border-color:${bannerColor}">
+      <span style="font-size:1.6rem">${totalNew > 0 ? '🎉' : 'ℹ️'}</span>
+      <div>
+        <div style="font-weight:800;font-size:1.1rem">${totalNew} new opportunit${totalNew === 1 ? 'y' : 'ies'} added</div>
+        <div style="font-size:.82rem;color:var(--text2)">across ${data.results.length} scrapers</div>
+      </div>
+      <a href="{{ url_for('student_feed') }}" class="btn btn-xs btn-green" target="_blank">View Feed →</a>
+    </div>`;
+
+        // Per-source result cards
+        html += '<div class="scrape-result-grid">';
+        data.results.forEach(r => {
+          const isOk = r.status === 'success';
+          html += `<div class="scrape-result-card ${isOk ? 'src-ok' : 'src-err'}">
+        <div class="src-header">
+          <span class="src-icon">${isOk ? '✅' : '❌'}</span>
+          <strong>${r.source}</strong>
+        </div>
+        <div class="src-stats">
+          <span class="src-new">+${r.new} new</span>
+          <span class="src-dup">${r.duplicates} dup</span>
+          <span class="src-total">${r.total} total</span>
+        </div>
+        ${r.error ? `<div class="src-error">${r.error.slice(0, 80)}</div>` : ''}
+      </div>`;
+        });
+        html += '</div>';
+
+        results.innerHTML = html;
+
+        // Re-enable buttons
+        ['btnCore', 'btnSocial', 'btnAll'].forEach(id => {
+          const b = document.getElementById(id);
+          b.disabled = false;
+          b.style.opacity = '1';
+        });
+      })
+      .catch(err => {
+        spinner.style.display = 'none';
+        results.style.display = 'block';
+        results.innerHTML = `<div class="scrape-summary" style="border-color:var(--red)">
+      <span style="font-size:1.6rem">❌</span>
+      <div><div style="font-weight:800">Scrape request failed</div>
+      <div style="font-size:.82rem">${err.message || 'Network error'}</div></div>
+    </div>`;
+        ['btnCore', 'btnSocial', 'btnAll'].forEach(id => {
+          document.getElementById(id).disabled = false;
+          document.getElementById(id).style.opacity = '1';
+        });
+      });
+  }
+</script>
+{% endblock %}
+{% endblock %}

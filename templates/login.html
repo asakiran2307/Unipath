@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span>⚡</span>
+      <h1>Opportunity<span class="brand-accent">Pulse</span></h1>
+    </div>
+    <h2 class="auth-title">Welcome back</h2>
+    <p class="auth-subtitle">Sign in to your personalized opportunity feed</p>
+
+    <form method="POST" action="{{ url_for('login') }}" class="auth-form" id="loginForm">
+      <div class="form-group">
+        <label for="email">Email address</label>
+        <input type="email" id="email" name="email" class="form-input" required
+               placeholder="you@college.edu" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <input type="password" id="password" name="password" class="form-input" required
+                 placeholder="••••••••" autocomplete="current-password" />
+          <button type="button" class="toggle-pw" onclick="togglePw('password', this)">👁️</button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="loginBtn">
+        Sign In →
+      </button>
+    </form>
+
+    <div class="auth-divider"><span>Demo Accounts</span></div>
+    <div class="demo-accounts">
+      <button class="demo-btn" onclick="fillDemo('student@pulse.ai','Demo@123')">
+        🎓 Student Demo
+      </button>
+      <button class="demo-btn" onclick="fillDemo('organizer@pulse.ai','Demo@123')">
+        📅 Organizer Demo
+      </button>
+      <button class="demo-btn" onclick="fillDemo('recruiter@pulse.ai','Demo@123')">
+        💼 Recruiter Demo
+      </button>
+    </div>
+
+    <p class="auth-switch">
+      Don't have an account? <a href="{{ url_for('register') }}">Create one free</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fillDemo(email, pw) {
+  document.getElementById('email').value = email;
+  document.getElementById('password').value = pw;
+  document.getElementById('loginForm').requestSubmit();
+}
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁️' : '🙈';
+}
+</script>
+{% endblock %}

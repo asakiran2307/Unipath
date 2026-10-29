@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Opportunity Pulse{% endblock %} — Student Discovery Portal</title>
+  <meta name="description" content="{% block meta_desc %}AI-powered unified student opportunity portal — hackathons, internships, scholarships & workshops in one place.{% endblock %}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+</head>
+<body>
+
+{% if current_user %}
+<!-- ── Nav ──────────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="{{ url_for('index') }}" class="nav-brand" style="display:flex; align-items:center; gap:10px;">
+      <img src="{{ url_for('static', filename='logo.jpeg') }}" alt="App Logo" style="height:40px; width:auto; border-radius:8px;" />
+      <div id="ai-status-indicator" title="Gemini Connection Agent" style="
+        display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; padding: 4px 8px; 
+        background: rgba(255,255,255,0.05); border-radius: 20px; transition: all 0.3s ease; color: #888;
+      ">
+        <span id="ai-dot" style="width:8px; height:8px; border-radius:50%; background:#888; box-shadow: 0 0 5px #888;"></span>
+        <span id="ai-text">Gemini Checking...</span>
+      </div>
+    </a>
+
+    <div class="nav-links">
+      {% if current_user.role == 'student' %}
+        <a href="{{ url_for('student_feed') }}" class="nav-link {% if request.endpoint == 'student_feed' %}active{% endif %}">
+          🔍 Feed
+        </a>
+        <a href="{{ url_for('student_saved') }}" class="nav-link {% if request.endpoint == 'student_saved' %}active{% endif %}">
+          💾 Saved
+        </a>
+        <a href="{{ url_for('teams') }}" class="nav-link {% if request.endpoint in ['teams','team_detail'] %}active{% endif %}">
+          🤝 Teams
+        </a>
+        <a href="{{ url_for('chat_list') }}" class="nav-link {% if request.endpoint in ['chat_list','chat_thread'] %}active{% endif %}" style="position:relative">
+          💬 Chat
+          {% if chat_unread > 0 %}
+          <span class="nav-chat-badge">{{ chat_unread }}</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('student_profile') }}" class="nav-link {% if request.endpoint == 'student_profile' %}active{% endif %}">
+          👤 Profile
+        </a>
+      {% elif current_user.role == 'organizer' %}
+        <a href="{{ url_for('organizer_dashboard') }}" class="nav-link {% if request.endpoint == 'organizer_dashboard' %}active{% endif %}">
+          📊 Dashboard
+        </a>
+        <a href="{{ url_for('organizer_new') }}" class="nav-link btn-nav {% if request.endpoint == 'organizer_new' %}active{% endif %}">
+          + Post Event
+        </a>
+      {% elif current_user.role == 'recruiter' %}
+        <a href="{{ url_for('recruiter_dashboard') }}" class="nav-link {% if request.endpoint == 'recruiter_dashboard' %}active{% endif %}">
+          📄 My Listings
+        </a>
+        <a href="{{ url_for('recruiter_new') }}" class="nav-link {% if request.endpoint == 'recruiter_new' %}active{% endif %}">
+          ➕ Post Job
+        </a>
+        <a href="{{ url_for('recruiter_talent') }}" class="nav-link {% if request.endpoint == 'recruiter_talent' %}active{% endif %}">
+          🎯 Talent Board
+        </a>
+        <a href="{{ url_for('teams') }}" class="nav-link {% if request.endpoint in ['teams','team_detail'] %}active{% endif %}">
+          🤝 Teams
+        </a>
+        <a href="{{ url_for('recruiter_chat_list') }}" class="nav-link {% if request.endpoint in ['recruiter_chat_list','recruiter_chat_thread'] %}active{% endif %}" style="position:relative">
+          📨 Inbox
+          {% if chat_unread > 0 %}
+          <span class="nav-chat-badge">{{ chat_unread }}</span>
+          {% endif %}
+        </a>
+      {% elif current_user.role == 'admin' %}
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
+          🛡️ Control Center
+        </a>
+        <a href="{{ url_for('admin_users') }}" class="nav-link {% if request.endpoint == 'admin_users' %}active{% endif %}">
+          👥 Users
+        </a>
+        <a href="{{ url_for('admin_social') }}" class="nav-link {% if request.endpoint == 'admin_social' %}active{% endif %}">
+          📡 Social
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="nav-right">
+      <!-- Notifications -->
+      <div class="notif-btn" id="notifToggle" onclick="toggleNotifs()">
+        🔔
+        {% if unread_count > 0 %}
+          <span class="notif-badge">{{ unread_count }}</span>
+        {% endif %}
+      </div>
+      <div class="notif-dropdown" id="notifDropdown">
+        <div class="notif-header">
+          <span>Notifications</span>
+          <button onclick="markReadAll()" class="mark-read-btn">Mark all read</button>
+        </div>
+        {% if notifications %}
+          {% for n in notifications[:6] %}
+          <div class="notif-item {% if not n.is_read %}unread{% endif %}">
+            <span>{{ n.message }}</span>
+            <small>{{ n.created_at[:10] }}</small>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="notif-empty">No notifications yet ✨</div>
+        {% endif %}
+      </div>
+
+      <!-- User menu -->
+      <div class="user-menu" id="userMenuToggle" onclick="toggleUserMenu()">
+        {% if user_profile and user_profile.get('avatar') %}
+        <img class="user-avatar" src="{{ url_for('uploaded_file', filename=user_profile.avatar) }}" alt="Avatar" style="object-fit: cover; padding: 0;" />
+        {% else %}
+        <div class="user-avatar">{{ current_user.name[0].upper() }}</div>
+        {% endif %}
+        <div class="user-info">
+          <span class="user-name">{{ current_user.name.split()[0] }}</span>
+          <span class="user-role-badge role-{{ current_user.role }}">{{ role_labels[current_user.role] }}</span>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="user-dropdown" id="userDropdown">
+        <div class="dropdown-header">
+          <strong>{{ current_user.name }}</strong>
+          <small>{{ current_user.email }}</small>
+        </div>
+        {% if current_user.role == 'student' %}
+          <a class="dropdown-item" href="{{ url_for('student_profile') }}">⚙️ Edit Profile</a>
+          <a class="dropdown-item" href="{{ url_for('student_saved') }}">💾 Saved</a>
+          <a class="dropdown-item" href="{{ url_for('teams') }}">🤝 Team Pool</a>
+          <a class="dropdown-item" href="{{ url_for('student_onboarding') }}">📄 My Resume</a>
+        {% elif current_user.role == 'recruiter' %}
+          <a class="dropdown-item" href="{{ url_for('recruiter_talent') }}">🎯 Talent Board</a>
+        {% endif %}
+        <a class="dropdown-item logout-item" href="{{ url_for('logout') }}">🚪 Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+{% endif %}
+
+<!-- ── Flash Messages ──────────────────────────────────────────────────────── -->
+<div class="flash-container" id="flashContainer">
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+  <div class="flash flash-{{ category }}" onclick="this.remove()">
+    <span>{{ message }}</span>
+    <button class="flash-close">✕</button>
+  </div>
+  {% endfor %}
+{% endwith %}
+</div>
+
+<!-- ── Page Content ────────────────────────────────────────────────────────── -->
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+{% if not current_user %}
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span>⚡</span> <strong>OpportunityPulse</strong>
+    </div>
+    <p class="footer-tag">AI-powered student opportunity discovery engine</p>
+    <div class="footer-links">
+      <a href="{{ url_for('login') }}">Login</a>
+      <a href="{{ url_for('register') }}">Register</a>
+    </div>
+  </div>
+</footer>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script>
+function toggleNotifs() {
+  document.getElementById('notifDropdown').classList.toggle('show');
+  document.getElementById('userDropdown').classList.remove('show');
+}
+function toggleUserMenu() {
+  document.getElementById('userDropdown').classList.toggle('show');
+  document.getElementById('notifDropdown').classList.remove('show');
+}
+function markReadAll() {
+  fetch('/api/mark-notifications-read', {method:'POST'})
+    .then(() => {
+      document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+      const badge = document.querySelector('.notif-badge');
+      if (badge) badge.remove();
+    });
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.notif-btn') && !e.target.closest('.notif-dropdown'))
+    document.getElementById('notifDropdown')?.classList.remove('show');
+  if (!e.target.closest('.user-menu') && !e.target.closest('.user-dropdown'))
+    document.getElementById('userDropdown')?.classList.remove('show');
+});
+// Auto-dismiss flash after 5s
+setTimeout(() => {
+  document.querySelectorAll('.flash').forEach(el => el.style.opacity = '0');
+  setTimeout(() => document.querySelectorAll('.flash').forEach(el => el.remove()), 400);
+}, 5000);
+
+// Live Gemini AI Connection Status
+async function updateAIStatus() {
+  const dot = document.getElementById('ai-dot');
+  const text = document.getElementById('ai-text');
+  if (!dot || !text) return;
+  try {
+    const res = await fetch('/api/ai_status');
+    const data = await res.json();
+    if (data.status === 'online') {
+      dot.style.background = '#4CAF50'; dot.style.boxShadow = '0 0 8px #4CAF50';
+      text.innerText = 'Gemini Active'; text.style.color = '#4CAF50';
+    } else if (data.status === 'exhausted') {
+      dot.style.background = '#FF9800'; dot.style.boxShadow = '0 0 8px #FF9800';
+      text.innerText = 'Gemini (Quota Full)'; text.style.color = '#FF9800';
+    } else {
+      dot.style.background = '#F44336'; dot.style.boxShadow = '0 0 8px #F44336';
+      text.innerText = 'Gemini Offline'; text.style.color = '#F44336';
+    }
+  } catch (e) {
+    if (dot) dot.style.background = '#F44336'; 
+    if (text) text.innerText = 'Gemini Error';
+  }
+}
+updateAIStatus();
+setInterval(updateAIStatus, 60000); // Check every minute
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

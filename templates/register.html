@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+  <div class="auth-card auth-card-wide">
+    <div class="auth-logo">
+      <span>⚡</span>
+      <h1>Opportunity<span class="brand-accent">Pulse</span></h1>
+    </div>
+    <h2 class="auth-title">Create your account</h2>
+    <p class="auth-subtitle">Join as a student, event organizer, or company recruiter</p>
+
+    <!-- Role selector -->
+    <div class="role-selector">
+      <label class="role-option" data-role="student" id="roleStudent">
+        <input type="radio" name="role_ui" value="student" checked />
+        <div class="role-card {% if not request.form.get('role') or request.form.get('role') == 'student' %}selected{% endif %}">
+          <span class="role-icon">🎓</span>
+          <strong>Student</strong>
+          <small>Browse &amp; discover opportunities</small>
+        </div>
+      </label>
+      <label class="role-option" data-role="organizer" id="roleOrganizer">
+        <input type="radio" name="role_ui" value="organizer" />
+        <div class="role-card {% if request.form.get('role') == 'organizer' %}selected{% endif %}">
+          <span class="role-icon">📅</span>
+          <strong>Event Organizer</strong>
+          <small>Post hackathons &amp; events</small>
+        </div>
+      </label>
+      <label class="role-option" data-role="recruiter" id="roleRecruiter">
+        <input type="radio" name="role_ui" value="recruiter" />
+        <div class="role-card {% if request.form.get('role') == 'recruiter' %}selected{% endif %}">
+          <span class="role-icon">💼</span>
+          <strong>Company Recruiter</strong>
+          <small>Post internships &amp; jobs</small>
+        </div>
+      </label>
+    </div>
+
+    <form method="POST" action="{{ url_for('register') }}" class="auth-form" id="registerForm">
+      <input type="hidden" name="role" id="selectedRole" value="{{ request.form.get('role', 'student') }}" />
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" name="name" class="form-input" required
+                 placeholder="Arjun Sharma" value="{{ request.form.get('name', '') }}" />
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" class="form-input" required
+                 placeholder="you@college.edu" value="{{ request.form.get('email', '') }}" />
+        </div>
+      </div>
+
+      <!-- Organization field (shown for organizer/recruiter) -->
+      <div class="form-group" id="orgGroup" style="display:none">
+        <label for="organization" id="orgLabel">Organization / Company Name</label>
+        <input type="text" id="organization" name="organization" class="form-input"
+               placeholder="Google India / TechFest 2026" value="{{ request.form.get('organization', '') }}" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <input type="password" id="password" name="password" class="form-input" required
+                   placeholder="Min 8 characters" />
+            <button type="button" class="toggle-pw" onclick="togglePw('password',this)">👁️</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="confirm_password">Confirm Password</label>
+          <input type="password" id="confirm_password" name="confirm_password" class="form-input" required
+                 placeholder="Repeat password" />
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full">
+        Create Account →
+      </button>
+    </form>
+
+    <p class="auth-switch">
+      Already have an account? <a href="{{ url_for('login') }}">Sign in</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const roleInput = document.getElementById('selectedRole');
+const orgGroup = document.getElementById('orgGroup');
+const orgLabel = document.getElementById('orgLabel');
+
+document.querySelectorAll('.role-option').forEach(option => {
+  option.addEventListener('click', () => {
+    const role = option.dataset.role;
+    roleInput.value = role;
+    document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+    option.querySelector('.role-card').classList.add('selected');
+    option.querySelector('input[type=radio]').checked = true;
+    if (role === 'organizer') {
+      orgGroup.style.display = '';
+      orgLabel.textContent = 'Organization / Event Name';
+    } else if (role === 'recruiter') {
+      orgGroup.style.display = '';
+      orgLabel.textContent = 'Company Name';
+    } else {
+      orgGroup.style.display = 'none';
+    }
+  });
+});
+
+// Password match validation
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+  const pw = document.getElementById('password').value;
+  const cpw = document.getElementById('confirm_password').value;
+  if (pw !== cpw) {
+    e.preventDefault();
+    alert('Passwords do not match!');
+  }
+});
+
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁️' : '🙈';
+}
+</script>
+{% endblock %}

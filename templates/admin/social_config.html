@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}Social Media Config{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+  <div class="bg-orb orb1"></div>
+  <div class="admin-header">
+    <div>
+      <h1>📡 Social Media Scrapers</h1>
+      <p class="admin-subtitle">Configure Instagram, Twitter/X &amp; LinkedIn — all run every 4 hours automatically</p>
+    </div>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-ghost">← Dashboard</a>
+  </div>
+
+  <!-- Status overview -->
+  <div class="social-status-grid">
+    {% for cred in social_creds %}
+    <div class="social-status-card {% if cred.is_active %}active{% endif %}">
+      <div class="ss-icon">
+        {% if cred.platform == 'instagram' %}📸
+        {% elif cred.platform == 'twitter' %}🐦
+        {% else %}💼{% endif %}
+      </div>
+      <div class="ss-info">
+        <strong>{{ cred.platform | title }}{% if cred.platform == 'twitter' %}/X{% endif %}</strong>
+        <span class="ss-badge {% if cred.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+          {% if cred.is_active %}● Active{% else %}○ Not Configured{% endif %}
+        </span>
+        {% if cred.last_scraped %}
+        <small>Last scraped: {{ cred.last_scraped[:16] }}</small>
+        {% endif %}
+        <small>Total runs: {{ cred.scrape_count }}</small>
+      </div>
+      {% if cred.is_active %}
+      <form method="POST" action="{{ url_for('admin_social_trigger', platform=cred.platform) }}" class="ss-trigger">
+        <button class="btn btn-sm btn-ghost">▶ Run Now</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ── Instagram ──────────────────────────────────────────────────────────── -->
+  <div class="social-config-card">
+    <div class="sc-header">
+      <div class="sc-icon sc-insta">📸</div>
+      <div>
+        <h2>Instagram</h2>
+        <p>Scrapes 40+ college &amp; company accounts automatically. <strong>No login required</strong> for public accounts. Optionally provide login for hashtag search.</p>
+      </div>
+      <span class="config-badge config-free">Free / No Auth</span>
+    </div>
+
+    <div class="sc-info-box">
+      <strong>Auto-monitored accounts include:</strong>
+      IIT Bombay, IIT Madras, IIT Delhi, IIT Roorkee, IIIT Hyderabad, VIT, NIT Trichy,
+      Google India, Microsoft India, Flipkart, Infosys, Wipro, TCS, Unstop, Devfolio, MLH, HackerEarth, GitHub India, and 20+ more.
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_social_save', platform='instagram') }}" class="sc-form">
+      <div class="form-card" style="margin:0">
+        <h3 class="form-card-title">Optional: Instagram Login (enables hashtag search)</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Instagram Username (optional)</label>
+            <input type="text" name="username" class="form-input" autocomplete="off"
+                   placeholder="your_instagram_username"
+                   value="{{ ig_creds.get('username', '') }}" />
+          </div>
+          <div class="form-group">
+            <label>Instagram Password (optional)</label>
+            <input type="password" name="password" class="form-input" autocomplete="new-password"
+                   placeholder="••••••••"
+                   value="{{ '●●●●●●' if ig_creds.get('password') else '' }}" />
+          </div>
+        </div>
+        <div class="sc-notice">
+          ℹ️ Instagram scraping works without login for all public college/company accounts. Login only enables hashtag-based discovery.
+        </div>
+      </div>
+      <div class="sc-actions">
+        <button type="submit" class="btn btn-primary">💾 Save &amp; Activate</button>
+        <form method="POST" action="{{ url_for('admin_social_trigger', platform='instagram') }}" style="display:inline">
+          <button class="btn btn-ghost">▶ Run Instagram Now</button>
+        </form>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Twitter/X ──────────────────────────────────────────────────────────── -->
+  <div class="social-config-card">
+    <div class="sc-header">
+      <div class="sc-icon sc-twitter">🐦</div>
+      <div>
+        <h2>Twitter / X</h2>
+        <p>Searches #hackathon, #internship, #scholarship tweets from verified accounts. Requires <strong>Twitter API v2 Bearer Token</strong> (Free tier: 1M tokens/month).</p>
+      </div>
+      <span class="config-badge config-auth">Needs API Keys</span>
+    </div>
+
+    <div class="sc-info-box">
+      <strong>Get your credentials:</strong>
+      <ol style="margin:0.5rem 0 0 1.2rem;font-size:0.85rem;color:var(--text2)">
+        <li>Go to <a href="https://developer.twitter.com/en/portal/dashboard" target="_blank">developer.twitter.com</a></li>
+        <li>Create a new Project + App (Free tier is fine)</li>
+        <li>Copy the <strong>Bearer Token</strong> from "Keys and Tokens" tab</li>
+        <li>Optionally add API Key + Secret for full access</li>
+      </ol>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_social_save', platform='twitter') }}" class="sc-form">
+      <div class="form-card" style="margin:0">
+        <h3 class="form-card-title">Twitter/X API Credentials</h3>
+        <div class="form-group">
+          <label>Bearer Token <span class="req-badge">Required</span></label>
+          <input type="password" name="bearer_token" class="form-input" autocomplete="new-password"
+                 placeholder="AAAAAAAAAAAAAAAA..."
+                 value="{{ '●●●●●●●●●●●●' if tw_creds.get('bearer_token') else '' }}" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>API Key (optional)</label>
+            <input type="text" name="api_key" class="form-input"
+                   placeholder="API Key"
+                   value="{{ tw_creds.get('api_key', '') }}" />
+          </div>
+          <div class="form-group">
+            <label>API Secret (optional)</label>
+            <input type="password" name="api_secret" class="form-input"
+                   placeholder="API Secret"
+                   value="{{ '●●●●●●' if tw_creds.get('api_secret') else '' }}" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Access Token (optional)</label>
+            <input type="text" name="access_token" class="form-input"
+                   placeholder="Access Token"
+                   value="{{ tw_creds.get('access_token', '') }}" />
+          </div>
+          <div class="form-group">
+            <label>Access Token Secret (optional)</label>
+            <input type="password" name="access_token_secret" class="form-input"
+                   placeholder="Access Token Secret"
+                   value="{{ '●●●●●●' if tw_creds.get('access_token_secret') else '' }}" />
+          </div>
+        </div>
+      </div>
+      <div class="sc-actions">
+        <button type="submit" class="btn btn-primary">💾 Save &amp; Activate</button>
+        {% if tw_active %}
+        <form method="POST" action="{{ url_for('admin_social_trigger', platform='twitter') }}" style="display:inline">
+          <button class="btn btn-ghost">▶ Run Twitter Now</button>
+        </form>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- ── LinkedIn ───────────────────────────────────────────────────────────── -->
+  <div class="social-config-card">
+    <div class="sc-header">
+      <div class="sc-icon sc-linkedin">💼</div>
+      <div>
+        <h2>LinkedIn</h2>
+        <p>Scrapes job boards, internship listings, and company hackathon posts. Requires <strong>LinkedIn account</strong> (email + password). Uses headless Chrome via Selenium.</p>
+      </div>
+      <span class="config-badge config-auth">Needs Login</span>
+    </div>
+
+    <div class="sc-info-box" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.05)">
+      ⚠️ <strong>Important:</strong> Use a <em>dedicated LinkedIn account</em>, not your personal one. LinkedIn may flag automated access. The scraper uses headless Chrome with anti-detection measures.
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_social_save', platform='linkedin') }}" class="sc-form">
+      <div class="form-card" style="margin:0">
+        <h3 class="form-card-title">LinkedIn Account Credentials</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>LinkedIn Email <span class="req-badge">Required</span></label>
+            <input type="email" name="email" class="form-input" autocomplete="off"
+                   placeholder="scraper@yourcompany.com"
+                   value="{{ li_creds.get('email', '') }}" />
+          </div>
+          <div class="form-group">
+            <label>LinkedIn Password <span class="req-badge">Required</span></label>
+            <input type="password" name="password" class="form-input" autocomplete="new-password"
+                   placeholder="••••••••"
+                   value="{{ '●●●●●●' if li_creds.get('password') else '' }}" />
+          </div>
+        </div>
+        <div class="sc-notice">
+          ℹ️ Credentials are stored encrypted at rest in the local database. Without login, LinkedIn is scraped in public-only mode (limited results).
+        </div>
+      </div>
+      <div class="sc-actions">
+        <button type="submit" class="btn btn-primary">💾 Save &amp; Activate</button>
+        {% if li_active %}
+        <form method="POST" action="{{ url_for('admin_social_trigger', platform='linkedin') }}" style="display:inline">
+          <button class="btn btn-ghost">▶ Run LinkedIn Now</button>
+        </form>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Schedule Info -->
+  <div class="social-schedule-info">
+    <div class="schedule-card">
+      <span>⏰</span>
+      <div>
+        <strong>Auto-Schedule: Every 4 Hours</strong>
+        <p>Core scrapers (Unstop, Devfolio, MLH, Internshala, Buddy4Study): Every 4h exactly</p>
+        <p>Social scrapers (Instagram, Twitter, LinkedIn): Every 4h + 30 min offset</p>
+      </div>
+    </div>
+    <div class="schedule-card">
+      <span>🛡️</span>
+      <div>
+        <strong>Anti-Bot Measures Active</strong>
+        <p>User-agent rotation, random delay (1–3s), retry with backoff, session reuse</p>
+      </div>
+    </div>
+    <div class="schedule-card">
+      <span>🔄</span>
+      <div>
+        <strong>Smart Deduplication</strong>
+        <p>SHA-256 hash + fuzzy title matching (88% threshold) prevents duplicate listings</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

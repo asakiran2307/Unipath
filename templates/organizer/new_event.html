@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Post New Event{% endblock %}
+{% block content %}
+<div class="form-page">
+  <div class="bg-orb orb1"></div>
+  <div class="form-container">
+    <div class="page-header">
+      <h1>📅 Post a New Event</h1>
+      <p>Reaches thousands of students after admin approval (usually within 24h)</p>
+    </div>
+    <form method="POST" action="{{ url_for('organizer_new') }}" class="post-form">
+      <div class="form-card">
+        <h3 class="form-card-title">📋 Event Details</h3>
+        <div class="form-group">
+          <label for="title">Event Title *</label>
+          <input type="text" id="title" name="title" class="form-input" required
+                 placeholder="e.g. TechFest 2026 National Hackathon" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="category">Category *</label>
+            <select id="category" name="category" class="form-input form-select" required>
+              <option value="hackathon">🏆 Hackathon</option>
+              <option value="workshop">🔧 Workshop</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="location">Location</label>
+            <input type="text" id="location" name="location" class="form-input"
+                   placeholder="Remote / Hyderabad / Pan India" value="Remote" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="description">Description *</label>
+          <textarea id="description" name="description" class="form-input form-textarea" required rows="4"
+                    placeholder="Describe the event, themes, problem statements…"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="company">Organizing Institution</label>
+          <input type="text" id="company" name="company" class="form-input"
+                 value="{{ user.organization or '' }}" placeholder="IIIT Hyderabad" />
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h3 class="form-card-title">💰 Reward & Eligibility</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reward_type">Reward Type *</label>
+            <select id="reward_type" name="reward_type" class="form-input form-select">
+              <option value="cash">💰 Cash Prize</option>
+              <option value="certificate" selected>🏅 Certificate</option>
+              <option value="free">🎁 Free / Swag</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="prize_amount">Prize Amount (₹, 0 if none)</label>
+            <input type="number" id="prize_amount" name="prize_amount" class="form-input" value="0" min="0" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="reward">Reward Description</label>
+          <input type="text" id="reward" name="reward" class="form-input"
+                 placeholder="e.g. ₹50,000 Cash Prize + Trophy" />
+        </div>
+        <div class="form-group">
+          <label for="eligibility">Eligibility</label>
+          <input type="text" id="eligibility" name="eligibility" class="form-input"
+                 value="Open to All Students" placeholder="e.g. 2nd/3rd Year CSE/IT" />
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h3 class="form-card-title">🔗 Links & Deadline</h3>
+        <div class="form-group">
+          <label for="apply_link">Registration / Apply Link *</label>
+          <input type="url" id="apply_link" name="apply_link" class="form-input" required
+                 placeholder="https://your-event.com/register" />
+        </div>
+        <div class="form-group">
+          <label for="source_url">Event Website</label>
+          <input type="url" id="source_url" name="source_url" class="form-input"
+                 placeholder="https://your-event.com" />
+        </div>
+        <div class="form-group">
+          <label for="deadline">Registration Deadline</label>
+          <input type="date" id="deadline" name="deadline" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label for="tags">Tags (comma-separated)</label>
+          <input type="text" id="tags" name="tags" class="form-input"
+                 placeholder="AI/ML, Web Dev, Open Source, Team Event" />
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('organizer_dashboard') }}" class="btn btn-ghost">← Cancel</a>
+        <button type="submit" class="btn btn-primary">🚀 Submit for Review</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

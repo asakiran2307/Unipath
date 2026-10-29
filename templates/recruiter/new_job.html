@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Post Job / Internship{% endblock %}
+{% block content %}
+<div class="form-page">
+  <div class="bg-orb orb1"></div>
+  <div class="form-container">
+    <div class="page-header">
+      <h1>💼 Post a Job or Internship</h1>
+      <p>Reaches thousands of students looking for entry-level roles</p>
+    </div>
+    <form method="POST" action="{{ url_for('recruiter_new') }}" class="post-form">
+      <div class="form-card">
+        <h3 class="form-card-title">📋 Position Details</h3>
+        <div class="form-group">
+          <label for="title">Job / Internship Title *</label>
+          <input type="text" id="title" name="title" class="form-input" required
+                 placeholder="e.g. SDE Intern – Summer 2026" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="category">Type *</label>
+            <select id="category" name="category" class="form-input form-select" required>
+              <option value="internship">💼 Internship</option>
+              <option value="job">🚀 Entry-Level Job</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="location">Location *</label>
+            <input type="text" id="location" name="location" class="form-input" required
+                   placeholder="Remote / Bengaluru / Mumbai" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="company">Company Name *</label>
+          <input type="text" id="company" name="company" class="form-input" required
+                 value="{{ user.organization or '' }}" placeholder="Google India" />
+        </div>
+        <div class="form-group">
+          <label for="description">Job Description *</label>
+          <textarea id="description" name="description" class="form-input form-textarea" required rows="5"
+                    placeholder="Describe responsibilities, tech stack, team, perks…"></textarea>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h3 class="form-card-title">💰 Compensation & Eligibility</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reward_type">Compensation Type *</label>
+            <select id="reward_type" name="reward_type" class="form-input form-select">
+              <option value="stipend">💼 Stipend / Salary</option>
+              <option value="certificate">🏅 Certificate (Unpaid)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="reward">Compensation Details *</label>
+            <input type="text" id="reward" name="reward" class="form-input" required
+                   placeholder="e.g. ₹30,000/month or ₹18 LPA" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="eligibility">Eligibility *</label>
+          <input type="text" id="eligibility" name="eligibility" class="form-input" required
+                 placeholder="e.g. 3rd Year B.Tech CSE/IT, CGPA 7+" />
+        </div>
+        <div class="form-group">
+          <label for="tags">Skills Required (comma-separated)</label>
+          <input type="text" id="tags" name="tags" class="form-input"
+                 placeholder="Python, React, SQL, Machine Learning" />
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h3 class="form-card-title">🔗 Application Link & Deadline</h3>
+        <div class="form-group">
+          <label for="apply_link">Application Link *</label>
+          <input type="url" id="apply_link" name="apply_link" class="form-input" required
+                 placeholder="https://careers.yourcompany.com/apply/..." />
+        </div>
+        <div class="form-group">
+          <label for="source_url">Job Page URL</label>
+          <input type="url" id="source_url" name="source_url" class="form-input"
+                 placeholder="https://careers.yourcompany.com/job/..." />
+        </div>
+        <div class="form-group">
+          <label for="deadline">Application Deadline</label>
+          <input type="date" id="deadline" name="deadline" class="form-input" />
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('recruiter_dashboard') }}" class="btn btn-ghost">← Cancel</a>
+        <button type="submit" class="btn btn-primary">📌 Submit for Review</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

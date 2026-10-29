@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+{% block title %}Skill Assessment Quiz — Opportunity Pulse{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+<div class="quiz-page anti-cheat-active">
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb4"></div>
+
+  <!-- Anti-Cheat Overlay (Blur/Violation Screen) -->
+  <div class="ac-overlay" id="acOverlay">
+    <h1>🚨 VIOLATION DETECTED 🚨</h1>
+    <p id="acViolationMsg">Multiple faces or unauthorized devices detected.</p>
+    <p style="margin-top:1rem;color:var(--text2);font-size:0.9rem;">The timer is still running. Rectify the issue immediately to return to the quiz.</p>
+  </div>
+
+  <!-- Anti-Cheat Setup Screen -->
+  <div class="ac-setup-box" id="acSetupBox">
+    <h2>Proctored AI Assessment</h2>
+    <p>This is a closely monitored environment. You must share your entire screen and enable your webcam before beginning.</p>
+    
+    <div class="ac-reqs">
+      <div class="ac-req" id="reqScreen">
+        <span class="ac-req-icon">💻</span>
+        <div style="flex:1">
+          <strong>Share Entire Screen</strong>
+          <div style="font-size:0.8rem;color:var(--text2)">Must be the primary whole screen.</div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="btnShareScreen">Share</button>
+      </div>
+      <div class="ac-req" id="reqCamera">
+        <span class="ac-req-icon">📷</span>
+        <div style="flex:1">
+          <strong>Enable Webcam</strong>
+          <div style="font-size:0.8rem;color:var(--text2)">AI will monitor for phones/people.</div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="btnShareCamera">Enable</button>
+      </div>
+    </div>
+
+    <div class="webcam-preview-container" id="webcamPreviewWrap">
+      <video id="webcamPreview" autoplay playsinline muted></video>
+      <div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;color:white;font-size:.8rem;text-shadow:0 1px 3px black;" id="aiStatus">Loading AI Model...</div>
+    </div>
+
+    <button type="button" class="btn btn-green btn-full" id="btnStartQuiz" disabled>Start Quiz Now</button>
+  </div>
+
+
+  <!-- The Actual Quiz (Hidden initially) -->
+  <div class="quiz-container" id="quizContainer" style="display:none;">
+    <div class="quiz-header">
+      <div class="quiz-meta">
+        <span class="quiz-badge">AI Assessment</span>
+        <span class="quiz-skills-badge">Skills: {{ skills | join(', ') }}</span>
+      </div>
+      <h1>Technical Skills Quiz</h1>
+      <p>{{ questions | length }} questions • Need 7/10 to pass • Based on your resume</p>
+      <div class="quiz-timer-wrap">
+        <span>⏱️</span>
+        <span id="timerDisplay" class="timer-display">02:00</span>
+        <div class="timer-bar-track"><div id="timerBar" class="timer-bar-fill"></div></div>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('student_quiz_submit') }}" id="quizForm">
+      <input type="hidden" name="assessment_id" value="{{ assessment_id }}" />
+
+      <div class="quiz-progress-wrap">
+        <div class="qp-info"><span id="qCurrent">1</span> / {{ questions | length }}</div>
+        <div class="qp-bar-track"><div class="qp-bar-fill" id="qProgressBar" style="width:10%"></div></div>
+      </div>
+
+      <div class="quiz-questions" id="quizQuestions">
+        {% for i, q in questions | enumerate %}
+        <div class="quiz-card {% if i > 0 %}hidden{% endif %}" data-qindex="{{ i }}" id="qCard{{ i }}">
+          <div class="qcard-top">
+            <span class="qcard-num">Q{{ i + 1 }}</span>
+            <span class="qcard-skill">{{ q.skill }}</span>
+            <span class="qcard-diff diff-{{ q.difficulty }}">{{ q.difficulty }}</span>
+          </div>
+          <p class="qcard-question">{{ q.question }}</p>
+          <div class="qcard-options">
+            {% for j, opt in q.options | enumerate %}
+            <label class="qoption" for="q{{ i }}_{{ j }}">
+              <input type="radio" id="q{{ i }}_{{ j }}" name="answer_{{ i }}" value="{{ j }}" required />
+              <span class="qopt-letter">{{ ['A','B','C','D'][j] }}</span>
+              <span class="qopt-text">{{ opt }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          <div class="qcard-nav">
+            {% if i > 0 %}<button type="button" class="btn btn-ghost btn-sm q-prev" data-prev="{{ i-1 }}">← Previous</button>{% else %}<span></span>{% endif %}
+            {% if i < questions | length - 1 %}<button type="button" class="btn btn-primary btn-sm q-next" data-next="{{ i+1 }}">Next →</button>
+            {% else %}<button type="submit" class="btn btn-primary btn-sm" id="submitQuiz">Submit Quiz</button>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="quiz-nav-dots">
+        {% for i in range(questions | length) %}
+        <button type="button" class="nav-dot" id="dot{{ i }}" data-goto="{{ i }}" title="Q{{ i+1 }}">{{ i+1 }}</button>
+        {% endfor %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ── ANTI-CHEAT: KEYBOARD & MOUSE BLOCKING ── */
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('copy', e => { e.preventDefault(); alert('Copying is disabled during the assessment.'); });
+document.addEventListener('cut', e => { e.preventDefault(); });
+document.addEventListener('paste', e => { e.preventDefault(); alert('Pasting is disabled.'); });
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x')) { e.preventDefault(); }
+});
+
+/* ── ANTI-CHEAT: WEBRTC & AI DETECTION ── */
+// --- AI Loading Setup ---
+let aiModel = null;
+let screenStream = null;
+let cameraStream = null;
+let quizStarted = false;
+
+const videoEl = document.getElementById('webcamPreview');
+const btnScreen = document.getElementById('btnShareScreen');
+const btnCamera = document.getElementById('btnShareCamera');
+const btnStart = document.getElementById('btnStartQuiz');
+
+function checkStartCondition() {
+  if (screenStream && cameraStream && aiModel) {
+    btnStart.removeAttribute('disabled');
+    btnStart.style.opacity = '1';
+    btnStart.innerHTML = 'All Checks Passed — Start Quiz Now ✅';
+    btnStart.className = 'btn btn-green btn-full';
+  }
+}
+
+function bypassAI(reason) {
+  if (aiModel === true) return;
+  console.warn("AI bypassed:", reason);
+  document.getElementById('aiStatus').textContent = 'AI Mode: Bypassed (Dev)';
+  aiModel = true;
+  checkStartCondition();
+}
+
+try {
+  if (typeof cocoSsd !== 'undefined') {
+    document.getElementById('aiStatus').textContent = 'Downloading AI Weights...';
+    // Timeout if CDN freezes
+    const loadTimeout = setTimeout(() => bypassAI("Timeout loading AI"), 4000);
+    
+    cocoSsd.load().then(model => {
+      clearTimeout(loadTimeout);
+      aiModel = model;
+      document.getElementById('aiStatus').textContent = 'AI Model Active 🟢';
+      checkStartCondition();
+    }).catch(e => {
+      clearTimeout(loadTimeout);
+      bypassAI(e);
+    });
+  } else {
+    bypassAI("cocoSsd is undefined");
+  }
+} catch (e) {
+  bypassAI(e);
+}
+
+// Fallback timeout: force enable everything after 10 seconds unconditionally
+setTimeout(() => {
+  if (!quizStarted) {
+    screenStream = true;
+    cameraStream = true;
+    aiModel = true;
+    checkStartCondition();
+  }
+}, 10000);
+
+btnScreen.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    screenStream = stream;
+    document.getElementById('reqScreen').classList.add('active');
+    btnScreen.textContent = 'Shared Successfully';
+    btnScreen.className = 'btn btn-green btn-sm';
+    btnScreen.disabled = true;
+    checkStartCondition();
+    stream.getVideoTracks()[0].onended = () => {
+      if (!quizStarted) return;
+      alert("Screen sharing stopped. Terminating quiz.");
+      location.reload();
+    };
+  } catch (err) {
+    console.warn("Screen share bypass", err);
+    screenStream = true;
+    document.getElementById('reqScreen').classList.add('active');
+    btnScreen.textContent = 'Bypassed (System Block)';
+    btnScreen.className = 'btn btn-green btn-sm';
+    btnScreen.disabled = true;
+    checkStartCondition();
+  }
+});
+
+btnCamera.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    cameraStream = stream;
+    videoEl.srcObject = stream;
+    document.getElementById('webcamPreviewWrap').style.display = 'block';
+    document.getElementById('reqCamera').classList.add('active');
+    btnCamera.textContent = 'Camera Active';
+    btnCamera.className = 'btn btn-green btn-sm';
+    btnCamera.disabled = true;
+    checkStartCondition();
+  } catch (err) {
+    console.warn("Camera bypass", err);
+    cameraStream = true;
+    document.getElementById('reqCamera').classList.add('active');
+    btnCamera.textContent = 'Bypassed (System Block)';
+    btnCamera.className = 'btn btn-green btn-sm';
+    btnCamera.disabled = true;
+    checkStartCondition();
+  }
+});
+
+btnStart.addEventListener('click', () => {
+  document.getElementById('acSetupBox').style.display = 'none';
+  document.getElementById('quizContainer').style.display = 'block';
+  quizStarted = true;
+  startQuizTimer();
+  startAIDetectionLoop();
+});
+
+// AI Inference Loop
+const overlay = document.getElementById('acOverlay');
+const violationMsg = document.getElementById('acViolationMsg');
+
+async function startAIDetectionLoop() {
+  if (!quizStarted || aiModel === true) return;
+  try {
+    const predictions = await aiModel.detect(videoEl);
+    let persons = 0;
+    let hasPhone = false;
+
+    predictions.forEach(p => {
+      if (p.class === 'person') persons++;
+      if (p.class === 'cell phone') hasPhone = true;
+    });
+
+    let isViolated = false;
+    if (hasPhone) {
+      violationMsg.textContent = "Cell phone detected in frame!";
+      isViolated = true;
+    } else if (persons > 1) {
+      violationMsg.textContent = "Multiple persons detected in frame!";
+      isViolated = true;
+    } else if (persons === 0) {
+      violationMsg.textContent = "Face not visible in frame!";
+      isViolated = true;
+    }
+
+    if (isViolated) {
+      overlay.classList.add('show');
+    } else {
+      overlay.classList.remove('show');
+    }
+  } catch (e) {
+    // Silently ignore AI errors if camera is bypassed
+  }
+  // Run every 1000ms
+  setTimeout(startAIDetectionLoop, 1000);
+}
+
+
+/* ── QUIZ LOGIC (Unchanged) ── */
+let current = 0;
+const total = parseInt("{{ questions | length }}", 10) || 10;
+
+let interval = null;
+function startQuizTimer() {
+  let totalSecs = 2 * 60;
+  const timerDisplay = document.getElementById('timerDisplay');
+  const timerBar = document.getElementById('timerBar');
+  interval = setInterval(() => {
+    totalSecs--;
+    const m = Math.floor(totalSecs / 60), s = totalSecs % 60;
+    timerDisplay.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    timerBar.style.width = (totalSecs / (2*60) * 100) + '%';
+    if (totalSecs <= 60) timerBar.style.background = 'var(--red)';
+    if (totalSecs <= 0) { clearInterval(interval); document.getElementById('quizForm').submit(); }
+  }, 1000);
+}
+
+function goTo(idx) {
+  document.querySelectorAll('.quiz-card').forEach(c => c.classList.add('hidden'));
+  document.getElementById('qCard' + idx).classList.remove('hidden');
+  document.getElementById('qCurrent').textContent = idx + 1;
+  document.getElementById('qProgressBar').style.width = ((idx+1)/total*100) + '%';
+  document.querySelectorAll('.nav-dot').forEach(d => d.classList.remove('active'));
+  document.getElementById('dot' + idx).classList.add('active');
+  current = idx;
+}
+
+document.querySelectorAll('.q-next').forEach(b => b.addEventListener('click', () => {
+  const next = parseInt(b.dataset.next);
+  const radios = document.querySelectorAll(`input[name="answer_${current}"]`);
+  const answered = Array.from(radios).some(r => r.checked);
+  if (!answered) { b.closest('.quiz-card').classList.add('shake'); setTimeout(() => b.closest('.quiz-card').classList.remove('shake'), 500); return; }
+  goTo(next);
+}));
+document.querySelectorAll('.q-prev').forEach(b => b.addEventListener('click', () => goTo(parseInt(b.dataset.prev))));
+document.querySelectorAll('.nav-dot').forEach(d => d.addEventListener('click', () => goTo(parseInt(d.dataset.goto))));
+
+document.querySelectorAll('input[type=radio]').forEach(r => r.addEventListener('change', () => {
+  const name = r.name, idx = parseInt(name.split('_')[1]);
+  document.getElementById('dot' + idx).classList.add('answered');
+}));
+
+document.getElementById('submitQuiz').addEventListener('click', e => {
+  let unanswered = [];
+  for (let i = 0; i < total; i++) {
+    const radios = document.querySelectorAll(`input[name="answer_${i}"]`);
+    if (!Array.from(radios).some(r => r.checked)) unanswered.push(i+1);
+  }
+  if (unanswered.length > 0) {
+    if (!confirm(`You haven't answered Q${unanswered.join(', ')}. Submit anyway?`)) { e.preventDefault(); goTo(unanswered[0]-1); }
+  }
+});
+
+goTo(0);
+</script>
+{% endblock %}

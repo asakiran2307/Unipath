@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Upload Your Resume — Opportunity Pulse{% endblock %}
+
+{% block content %}
+<div class="onboard-page">
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+
+  <div class="onboard-container">
+    <div class="onboard-header">
+      <div class="onboard-logo">📄</div>
+      <h1>Upload Your Resume</h1>
+      <p>Our AI will read your resume, extract your skills, and build a personalized assessment just for you.</p>
+    </div>
+
+    <!-- Steps indicator -->
+    <div class="onboard-steps">
+      <div class="ob-step active">
+        <div class="step-dot active">1</div>
+        <span>Upload Resume</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="ob-step">
+        <div class="step-dot">2</div>
+        <span>AI Skill Test</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="ob-step">
+        <div class="step-dot">3</div>
+        <span>Personalized Feed</span>
+      </div>
+    </div>
+
+    <!-- Upload form -->
+    <form method="POST" action="{{ url_for('student_onboarding') }}"
+          enctype="multipart/form-data" id="resumeForm" class="upload-form">
+
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="resumeFile" name="resume" accept=".pdf" required hidden />
+        <div class="dz-icon">📋</div>
+        <div class="dz-text">
+          <strong>Drag & Drop your Resume PDF here</strong>
+          <span>or click to browse</span>
+        </div>
+        <div class="dz-hint">PDF only • Max 5MB</div>
+        <div id="filePreview" class="file-preview hidden">
+          <span class="file-icon">✅</span>
+          <span id="fileName">No file selected</span>
+          <button type="button" id="removeFile" class="remove-file">✕</button>
+        </div>
+      </div>
+
+      <div class="upload-info-grid">
+        <div class="uinfo-card">
+          <span>🤖</span>
+          <div>
+            <strong>AI Skill Detection</strong>
+            <small>Gemini reads your resume and extracts Python, React, ML, SQL and any other skills automatically.</small>
+          </div>
+        </div>
+        <div class="uinfo-card">
+          <span>📝</span>
+          <div>
+            <strong>10-Question Quiz</strong>
+            <small>A personalised technical quiz is generated based only on YOUR skills. Need 7/10 to pass.</small>
+          </div>
+        </div>
+        <div class="uinfo-card">
+          <span>🎯</span>
+          <div>
+            <strong>Smart Feed</strong>
+            <small>Your feed shows Python hackathons if you know Python. ML internships if you know ML. Exactly relevant.</small>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-xl" id="submitBtn" disabled>
+        <span id="submitText">Select your PDF first</span>
+      </button>
+
+      {% if current_user %}
+      <p class="skip-link">
+        <a href="{{ url_for('student_feed') }}" class="text-muted">Skip for now →</a>
+      </p>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('resumeFile');
+const filePreview = document.getElementById('filePreview');
+const fileName = document.getElementById('fileName');
+const submitBtn = document.getElementById('submitBtn');
+const submitText = document.getElementById('submitText');
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dz-active'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dz-active'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('dz-active');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') setFile(file);
+  else alert('Please upload a PDF file.');
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+function setFile(file) {
+  const dt = new DataTransfer(); dt.items.add(file);
+  fileInput.files = dt.files;
+  fileName.textContent = file.name + ' (' + (file.size/1024/1024).toFixed(2) + ' MB)';
+  filePreview.classList.remove('hidden');
+  dropzone.querySelector('.dz-text').style.display = 'none';
+  dropzone.querySelector('.dz-icon').style.display = 'none';
+  dropzone.querySelector('.dz-hint').style.display = 'none';
+  submitBtn.disabled = false;
+  submitText.textContent = 'Analyse Resume & Start Quiz  →';
+}
+
+document.getElementById('removeFile').addEventListener('click', e => {
+  e.stopPropagation(); fileInput.value = '';
+  filePreview.classList.add('hidden');
+  dropzone.querySelector('.dz-text').style.display = '';
+  dropzone.querySelector('.dz-icon').style.display = '';
+  dropzone.querySelector('.dz-hint').style.display = '';
+  submitBtn.disabled = true;
+  submitText.textContent = 'Select your PDF first';
+});
+
+document.getElementById('resumeForm').addEventListener('submit', () => {
+  submitBtn.disabled = true;
+  submitText.innerHTML = '<span class="spin">⏳</span> AI is reading your resume...';
+});
+</script>
+{% endblock %}

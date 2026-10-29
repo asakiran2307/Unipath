@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Team Pool — Find Hackathon Teammates{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+
+  <!-- Header -->
+  <div class="dash-header" style="flex-wrap:wrap;gap:1rem;">
+    <div>
+      <h1>🤝 Team Pool</h1>
+      <p style="color:var(--text2);font-size:.9rem">Need a teammate for a hackathon? Post a request and find your squad!</p>
+    </div>
+    <button class="btn btn-primary" onclick="document.getElementById('createModal').classList.add('show')">
+      + Post Team Request
+    </button>
+  </div>
+
+  <!-- My pools -->
+  {% if my_pools %}
+  <div class="my-pools-section">
+    <h3 style="font-size:.95rem;font-weight:700;margin-bottom:.75rem;color:var(--text2)">YOUR ACTIVE POOLS</h3>
+    <div class="pool-strip">
+      {% for pool in my_pools %}
+      <div class="my-pool-pill status-{{ pool.status }}">
+        <span>🏆 {{ pool.hackathon_name }}</span>
+        <span class="pill-sep">•</span>
+        <span>{{ pool.current_size }}/{{ pool.team_size }} members</span>
+        <span class="pool-status-tag">{{ pool.status }}</span>
+        <a href="{{ url_for('team_detail', pool_id=pool.id) }}" class="pill-link">Manage →</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Filter bar -->
+  <div class="talent-filters" style="margin-bottom:1.5rem">
+    <form method="GET" action="{{ url_for('teams') }}" class="filter-form-inline">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" name="skill" class="search-input"
+               placeholder="Filter by skill (Python, ML, React…)"
+               value="{{ active_skill or '' }}" />
+      </div>
+      <select name="status" class="form-input form-select" style="width:auto">
+        <option value="open" {% if active_status=='open' %}selected{% endif %}>Open Teams</option>
+        <option value="full" {% if active_status=='full' %}selected{% endif %}>Full Teams</option>
+        <option value="closed" {% if active_status=='closed' %}selected{% endif %}>Closed</option>
+      </select>
+      <button class="btn btn-primary" type="submit">Filter</button>
+      {% if active_skill %}<a href="{{ url_for('teams') }}" class="btn btn-ghost">Clear</a>{% endif %}
+    </form>
+  </div>
+
+  <!-- Pool cards -->
+  {% if pools %}
+  <div class="pool-grid">
+    {% for pool in pools %}
+    <div class="pool-card {% if pool.status != 'open' %}pool-closed{% endif %}">
+      <div class="pool-card-top">
+        <div class="pool-hackathon">🏆 {{ pool.hackathon_name }}</div>
+        <span class="pool-status-badge status-{{ pool.status }}">{{ pool.status }}</span>
+      </div>
+
+      {% if pool.team_name %}
+      <div class="pool-team-name">Team: {{ pool.team_name }}</div>
+      {% endif %}
+
+      <div class="pool-creator">
+        <div class="creator-avatar">{{ pool.creator_name[0].upper() }}</div>
+        <div>
+          <div class="creator-name">{{ pool.creator_name }}</div>
+          {% if pool.creator_college %}
+          <div class="creator-meta">{{ pool.creator_college }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="pool-spots">
+        <div class="spots-bar-track">
+          {% for i in range(pool.team_size) %}
+          <div class="spot-block {% if i < pool.current_size %}spot-filled{% endif %}"></div>
+          {% endfor %}
+        </div>
+        <span class="spots-text">{{ pool.current_size }}/{{ pool.team_size }} members</span>
+      </div>
+
+      {% if pool.roles_needed %}
+      <div class="pool-roles">
+        <strong>Looking for:</strong>
+        {% for role in pool.roles_needed %}
+        <span class="role-tag">{{ role }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if pool.skills_needed %}
+      <div class="pool-skills">
+        {% for sk in pool.skills_needed[:5] %}
+        <span class="tag" style="font-size:.72rem">{{ sk }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if pool.description %}
+      <p class="pool-desc">{{ pool.description[:120] }}{% if pool.description|length > 120 %}…{% endif %}</p>
+      {% endif %}
+
+      <div class="pool-footer">
+        <span class="pool-time">{{ pool.created_at[:10] }}</span>
+        {% if pool.creator_id != current_uid and pool.status == 'open' %}
+          {% if pool.id in requested_ids %}
+          <span class="btn btn-xs" style="opacity:.6;cursor:default">✓ Requested</span>
+          {% else %}
+          <a href="{{ url_for('team_detail', pool_id=pool.id) }}" class="btn btn-primary btn-sm">
+            Request to Join →
+          </a>
+          {% endif %}
+        {% elif pool.creator_id == current_uid %}
+        <a href="{{ url_for('team_detail', pool_id=pool.id) }}" class="btn btn-ghost btn-sm">Manage</a>
+        {% else %}
+        <span class="btn btn-xs" style="opacity:.5">{{ pool.status | title }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🤝</div>
+    <h3>No open team pools yet</h3>
+    <p>Be the first to post a team request for an upcoming hackathon!</p>
+    <button class="btn btn-primary" onclick="document.getElementById('createModal').classList.add('show')">
+      Post a Team Request
+    </button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Create Pool Modal -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>🤝 Post Team Request</h2>
+      <button class="modal-close" onclick="document.getElementById('createModal').classList.remove('show')">✕</button>
+    </div>
+    <form method="POST" action="{{ url_for('team_create') }}" class="modal-form">
+      <div class="form-group">
+        <label class="form-label">Hackathon Name *</label>
+        <input type="text" name="hackathon_name" class="form-input" required
+               placeholder="e.g. Smart India Hackathon 2025" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Your Team Name (optional)</label>
+        <input type="text" name="team_name" class="form-input"
+               placeholder="e.g. ByteBuilders" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Team Size</label>
+          <select name="team_size" class="form-input form-select">
+            <option value="2">2 members</option>
+            <option value="3">3 members</option>
+            <option value="4" selected>4 members</option>
+            <option value="5">5 members</option>
+            <option value="6">6 members</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Your current count</label>
+          <select name="current_size" class="form-input form-select">
+            <option value="1" selected>1 (just me)</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role(s) Needed</label>
+        <div class="tag-check-grid">
+          {% for role in ['Frontend Dev','Backend Dev','Full Stack','ML Engineer','Data Scientist','UI/UX Designer','DevOps','Android Dev','iOS Dev','Blockchain Dev','IoT Engineer','Any'] %}
+          <label class="tag-check">
+            <input type="checkbox" name="roles_needed" value="{{ role }}" />
+            {{ role }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Skills Required</label>
+        <input type="text" name="skills_needed" class="form-input"
+               placeholder="e.g. Python, React, TensorFlow (comma separated)" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description / Message</label>
+        <textarea name="description" class="form-input" rows="3"
+                  placeholder="Tell potential teammates about your idea, what you're building, and what you're looking for…"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Post Team Request 🚀</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

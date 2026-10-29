@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Recruiter Dashboard — Opportunity Pulse{% endblock %}
+{% block content %}
+<div class="dashboard-page">
+  <div class="bg-orb orb1"></div>
+  <div class="dash-header" style="flex-wrap:wrap;gap:1rem;">
+    <div>
+      <h1>💼 Recruiter Dashboard</h1>
+      <p style="color:var(--text2)">{{ user.organization or user.name }} — Manage your listings & find talent</p>
+    </div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+      <a href="{{ url_for('recruiter_talent') }}" class="btn btn-ghost">🎯 Talent Board</a>
+      <a href="{{ url_for('recruiter_new') }}" class="btn btn-primary">+ Post New Listing</a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="dash-stats">
+    <div class="stat-card">
+      <div class="stat-num-lg">{{ stats.total }}</div>
+      <div class="stat-label">Total Posted</div>
+    </div>
+    <div class="stat-card stat-green">
+      <div class="stat-num-lg">{{ stats.approved }}</div>
+      <div class="stat-label">Live ✅</div>
+    </div>
+    <div class="stat-card stat-amber">
+      <div class="stat-num-lg">{{ stats.pending }}</div>
+      <div class="stat-label">Under Review ⏳</div>
+    </div>
+    <div class="stat-card stat-red">
+      <div class="stat-num-lg">{{ stats.rejected }}</div>
+      <div class="stat-label">Rejected ❌</div>
+    </div>
+  </div>
+
+  {% if stats.pending > 0 %}
+  <div class="info-banner">
+    ⏳ {{ stats.pending }} listing(s) waiting for admin approval. Usually takes 24h.
+  </div>
+  {% endif %}
+
+  {% if not opportunities %}
+  <div class="empty-state">
+    <div class="empty-icon">💼</div>
+    <h3>No listings yet</h3>
+    <p>Post internships or entry-level jobs to find skill-verified students</p>
+    <a href="{{ url_for('recruiter_new') }}" class="btn btn-primary">+ Post Listing</a>
+  </div>
+
+  {% else %}
+  <!-- Listings with matching students inline -->
+  <div style="display:flex;flex-direction:column;gap:1.5rem">
+    {% for opp in opportunities %}
+    <div class="recruiter-listing-card status-card-{{ opp.status }}">
+      <!-- Listing header -->
+      <div class="rl-header">
+        <div style="flex:1">
+          <div class="rl-title">{{ opp.title }}</div>
+          <div class="rl-meta">
+            <span class="cat-badge cat-{{ opp.category }}">{{ opp.category | title }}</span>
+            <span style="color:var(--text2);font-size:.82rem">📍 {{ opp.location or 'Remote' }}</span>
+            {% if opp.reward %}
+            <span style="color:var(--text2);font-size:.82rem">💰 {{ opp.reward[:40] }}</span>
+            {% endif %}
+            {% if opp.deadline %}
+            <span class="chip-{{ opp.deadline_color }}">{{ opp.deadline_label }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.75rem;flex-shrink:0">
+          <span class="status-badge status-{{ opp.status }}">
+            {% if opp.status == 'approved' %}✅ Live
+            {% elif opp.status == 'pending' %}⏳ Review
+            {% else %}❌ Rejected{% endif %}
+          </span>
+          <form method="POST" action="{{ url_for('recruiter_delete', opp_id=opp.id) }}"
+                style="display:inline" onsubmit="return confirm('Delete this listing?')">
+            <button class="table-action-del" title="Delete">🗑️</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Matched students (only for approved) -->
+      {% if opp.status == 'approved' and opp.matched_students %}
+      <div class="matched-students-strip">
+        <div class="ms-label">🎯 {{ opp.matched_students | length }} skill-matched student{{ 's' if opp.matched_students|length != 1 else '' }}:</div>
+        <div class="ms-cards">
+          {% for st in opp.matched_students %}
+          <div class="ms-card">
+            <div class="ms-avatar">{{ st.name[0].upper() }}</div>
+            <div class="ms-info">
+              <div class="ms-name">{{ st.name }}</div>
+              <div class="ms-college">{{ st.college or st.college_extracted or '' }}</div>
+              {% if st.passed %}<span class="ms-badge verified">✅ Verified</span>{% endif %}
+            </div>
+            <a href="{{ url_for('recruiter_chat_thread', other_id=st.id) }}"
+               class="btn btn-xs btn-green" title="Chat">💬</a>
+          </div>
+          {% endfor %}
+          <a href="{{ url_for('recruiter_talent') }}" class="ms-more-btn">
+            View all →
+          </a>
+        </div>
+      </div>
+      {% elif opp.status == 'approved' %}
+      <div class="matched-students-strip" style="color:var(--text3);font-size:.82rem;padding:.75rem 1.25rem">
+        No skill-matched students yet. <a href="{{ url_for('recruiter_talent') }}" style="color:var(--accent)">Browse all talent →</a>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

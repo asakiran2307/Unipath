@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Team — {{ pool.hackathon_name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+  <div class="bg-orb orb1"></div>
+  <div class="dash-header">
+    <div>
+      <a href="{{ url_for('teams') }}" class="btn btn-ghost btn-sm" style="margin-bottom:.75rem">← Team Pool</a>
+      <h1>🏆 {{ pool.hackathon_name }}</h1>
+      {% if pool.team_name %}<p style="color:var(--text2)">Team: <strong>{{ pool.team_name }}</strong></p>{% endif %}
+    </div>
+    <span class="pool-status-badge status-{{ pool.status }}" style="font-size:.9rem;padding:.4rem 1rem">
+      {{ pool.status | title }}
+    </span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:2rem;align-items:flex-start">
+    <!-- Left: Pool details -->
+    <div>
+      <div class="learn-module-card">
+        <div class="pool-creator" style="margin-bottom:1.25rem">
+          <div class="creator-avatar" style="width:48px;height:48px;font-size:1.25rem">
+            {{ pool.creator_name[0].upper() }}
+          </div>
+          <div>
+            <div class="creator-name" style="font-size:1rem">{{ pool.creator_name }}</div>
+            <div class="creator-meta">Posted {{ pool.created_at[:10] }}</div>
+          </div>
+        </div>
+
+        <div class="pool-spots" style="margin-bottom:1.25rem">
+          <div class="spots-bar-track" style="gap:.4rem">
+            {% for i in range(pool.team_size) %}
+            <div class="spot-block {% if i < pool.current_size %}spot-filled{% endif %}"
+                 style="flex:1;height:14px;border-radius:4px;font-size:.65rem;display:flex;align-items:center;justify-content:center;color:#fff">
+              {% if i < pool.current_size %}✓{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          <span class="spots-text">{{ pool.current_size }}/{{ pool.team_size }} members · {{ pool.team_size - pool.current_size }} spot{{ 's' if (pool.team_size - pool.current_size) != 1 else '' }} open</span>
+        </div>
+
+        {% if pool.roles_needed %}
+        <div class="pool-roles" style="margin-bottom:1rem">
+          <strong style="font-size:.85rem;display:block;margin-bottom:.5rem">Looking for:</strong>
+          {% for role in pool.roles_needed %}
+          <span class="role-tag">{{ role }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if pool.skills_needed %}
+        <div style="margin-bottom:1rem">
+          <strong style="font-size:.85rem;display:block;margin-bottom:.5rem">Skills needed:</strong>
+          <div style="display:flex;flex-wrap:wrap;gap:.35rem">
+            {% for sk in pool.skills_needed %}
+            <span class="tag">{{ sk }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if pool.description %}
+        <div class="what-you-learn" style="margin-top:1rem">
+          <strong>About this team:</strong>
+          <p style="color:var(--text2);margin:.5rem 0 0;font-size:.9rem;line-height:1.6">{{ pool.description }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Join request form (non-creator, open pool) -->
+      {% if not is_creator and pool.status == 'open' %}
+      <div class="learn-module-card" style="margin-top:1rem">
+        {% if already_requested %}
+        <div style="text-align:center;padding:1rem">
+          <div style="font-size:2rem;margin-bottom:.5rem">✅</div>
+          <strong>Join request sent!</strong>
+          <p style="color:var(--text2);font-size:.85rem;margin:.5rem 0 1rem">
+            Waiting for {{ pool.creator_name }} to respond.
+          </p>
+          <a href="{{ url_for('chat_thread', other_id=pool.creator_id) }}" class="btn btn-ghost btn-sm">
+            💬 Message {{ pool.creator_name }}
+          </a>
+        </div>
+        {% else %}
+        <h3 style="font-size:1rem;font-weight:800;margin-bottom:1rem">Send a Join Request</h3>
+        <form method="POST" action="{{ url_for('team_join', pool_id=pool.id) }}">
+          <div class="form-group">
+            <label class="form-label">Introduce yourself</label>
+            <textarea name="message" class="form-input" rows="3" required
+                      placeholder="Tell them your skills, experience, and why you want to join…"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Send Request 🤝</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Manage requests (creator view) -->
+      {% if is_creator %}
+      <div class="learn-module-card" style="margin-top:1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <h3 style="font-size:1rem;font-weight:800;margin:0">
+            Join Requests ({{ requests | length }})
+          </h3>
+          {% if pool.status == 'open' %}
+          <form method="POST" action="{{ url_for('team_close', pool_id=pool.id) }}">
+            <button class="btn btn-ghost btn-sm">Close Pool</button>
+          </form>
+          {% endif %}
+        </div>
+        {% if requests %}
+        <div style="display:flex;flex-direction:column;gap:.875rem">
+          {% for req in requests %}
+          <div class="request-card status-req-{{ req.status }}">
+            <div class="req-top">
+              <div class="creator-avatar" style="width:36px;height:36px;font-size:.9rem">
+                {{ req.requester_name[0].upper() }}
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:.9rem">{{ req.requester_name }}</div>
+                <div style="color:var(--text2);font-size:.78rem">{{ req.requester_email }}</div>
+              </div>
+              <span class="req-status-badge req-{{ req.status }}">{{ req.status }}</span>
+            </div>
+            {% if req.message %}
+            <p class="req-message">"{{ req.message }}"</p>
+            {% endif %}
+            {% if req.requester_skills %}
+            <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.75rem">
+              {% for sk in req.requester_skills[:5] %}
+              <span class="tag" style="font-size:.7rem">{{ sk }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+              {% if req.status == 'pending' %}
+              <form method="POST" action="{{ url_for('team_respond', request_id=req.id) }}">
+                <input type="hidden" name="action" value="accepted" />
+                <button class="btn btn-primary btn-sm">✓ Accept</button>
+              </form>
+              <form method="POST" action="{{ url_for('team_respond', request_id=req.id) }}">
+                <input type="hidden" name="action" value="rejected" />
+                <button class="btn btn-ghost btn-sm">✗ Reject</button>
+              </form>
+              {% endif %}
+              <a href="{{ url_for('chat_thread', other_id=req.requester_id) }}"
+                 class="btn btn-ghost btn-sm">💬 Chat</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding:2rem 0">
+          <div class="empty-icon" style="font-size:2rem">📭</div>
+          <p>No join requests yet. Share your pool link!</p>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: Quick actions -->
+    <div>
+      <div class="learn-module-card">
+        <h3 style="font-size:.9rem;font-weight:800;margin-bottom:1rem">Quick Actions</h3>
+        <div style="display:flex;flex-direction:column;gap:.6rem">
+          <a href="{{ url_for('teams') }}" class="btn btn-ghost btn-full">← All Pools</a>
+          {% if not is_creator and not already_requested and pool.status == 'open' %}
+          <a href="#join-form" class="btn btn-primary btn-full">🤝 Request to Join</a>
+          {% endif %}
+          <a href="{{ url_for('chat_thread', other_id=pool.creator_id) }}"
+             class="btn btn-ghost btn-full">💬 Message Creator</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

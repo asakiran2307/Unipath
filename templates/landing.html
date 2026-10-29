@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Opportunity Pulse{% endblock %}
+
+{% block content %}
+<!-- Hero ──────────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+  <div class="bg-orb orb3"></div>
+  <div class="hero-inner">
+    <img src="{{ url_for('static', filename='logo.jpeg') }}" alt="App Logo" class="hero-logo" />
+    <h1 class="hero-title">
+      Your Career,<br/>
+      <span class="gradient-text">One Feed Away</span>
+    </h1>
+    <p class="hero-subtitle">
+      Stop wasting 20% of your time checking 10 different sites.<br/>
+      <strong>Opportunity Pulse</strong> aggregates hackathons, internships, scholarships &amp; workshops — personalized for <em>your</em> profile.
+    </p>
+    <div class="hero-cta">
+      <a href="{{ url_for('register') }}" class="btn btn-primary btn-xl">
+        🚀 Get My Feed — Free
+      </a>
+      <a href="{{ url_for('login') }}" class="btn btn-ghost btn-xl">
+        Sign In →
+      </a>
+    </div>
+    <div class="hero-trust">
+      <span>✅ 5 Sources Aggregated</span>
+      <span>✅ Zero Manual Searching</span>
+      <span>✅ Real-time Deadlines</span>
+      <span>✅ AI-Personalized</span>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Bar ─────────────────────────────────────────────────────────────── -->
+<section class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <span class="stat-num" data-target="{{ stats.total_opportunities }}">{{ stats.total_opportunities }}</span>
+      <span class="stat-label">Live Opportunities</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="{{ stats.hackathons }}">{{ stats.hackathons }}</span>
+      <span class="stat-label">Hackathons</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="{{ stats.internships }}">{{ stats.internships }}</span>
+      <span class="stat-label">Internships</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="{{ stats.scholarships }}">{{ stats.scholarships }}</span>
+      <span class="stat-label">Scholarships</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="{{ stats.cash_prizes }}">{{ stats.cash_prizes }}</span>
+      <span class="stat-label">Cash Prizes</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="{{ stats.total_users }}">{{ stats.total_users }}</span>
+      <span class="stat-label">Students</span>
+    </div>
+  </div>
+</section>
+
+<!-- Featured Opportunities ─────────────────────────────────────────────────── -->
+<section class="featured-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>🔥 Featured Right Now</h2>
+      <p>Hand-picked opportunities closing soon. Don't miss out.</p>
+    </div>
+    <div class="cards-grid">
+      {% for opp in featured %}
+      <div class="opp-card category-{{ opp.category }} {% if opp.is_featured %}is-featured{% endif %}">
+        <div class="card-top">
+          <div class="card-badges">
+            <span class="cat-badge cat-{{ opp.category }}">{{ opp.category | title }}</span>
+            {% if opp.reward_type == 'cash' %}
+              <span class="reward-badge reward-cash">💰 Cash</span>
+            {% elif opp.reward_type == 'stipend' %}
+              <span class="reward-badge reward-stipend">💼 Stipend</span>
+            {% elif opp.reward_type == 'free' %}
+              <span class="reward-badge reward-free">🎓 Free</span>
+            {% else %}
+              <span class="reward-badge reward-cert">🏅 Certificate</span>
+            {% endif %}
+          </div>
+          {% if opp.days_left is not none %}
+          <div class="deadline-chip chip-{{ opp.deadline_color }}">
+            ⏰ {{ opp.deadline_label }}
+          </div>
+          {% endif %}
+        </div>
+        <h3 class="card-title">{{ opp.title }}</h3>
+        <div class="card-company">{{ opp.company or opp.source }}</div>
+        <div class="card-reward">{{ opp.reward }}</div>
+        <div class="card-meta">
+          <span>📍 {{ opp.location }}</span>
+          <span>👤 {{ opp.eligibility[:40] }}{% if opp.eligibility|length > 40 %}…{% endif %}</span>
+        </div>
+        {% if opp.tags %}
+        <div class="card-tags">
+          {% for tag in opp.tags[:3] %}
+          <span class="tag">{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <a href="{{ opp.apply_link }}" target="_blank" rel="noopener" class="card-apply-btn">
+          Apply Now →
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="see-all-wrap">
+      <a href="{{ url_for('register') }}" class="btn btn-outline">
+        See All {{ stats.total_opportunities }}+ Opportunities →
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works ─────────────────────────────────────────────────────────── -->
+<section class="how-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>⚙️ How Opportunity Pulse Works</h2>
+      <p>Three steps to your perfect opportunity feed</p>
+    </div>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="step-icon" style="background:var(--accent)">🎓</div>
+        <h3>1. Set Your Profile</h3>
+        <p>Tell us your year, branch, interests and skills. Takes 60 seconds.</p>
+      </div>
+      <div class="how-arrow">→</div>
+      <div class="how-step">
+        <div class="step-icon" style="background:linear-gradient(135deg,var(--cyan),var(--accent))">🤖</div>
+        <h3>2. AI Finds Matches</h3>
+        <p>Our AI-powered engine scores every opportunity against your profile.</p>
+      </div>
+      <div class="how-arrow">→</div>
+      <div class="how-step">
+        <div class="step-icon" style="background:linear-gradient(135deg,var(--accent2),var(--emerald))">⚡</div>
+        <h3>3. Apply &amp; Win</h3>
+        <p>Get deadline countdowns, save favorites, and apply with one click.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Sources ──────────────────────────────────────────────────────────────── -->
+<section class="sources-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>📡 5 Sources, One Feed</h2>
+      <p>We scrape every 4 hours so you never miss a deadline</p>
+    </div>
+    <div class="sources-grid">
+      <div class="source-card"><span>🏆</span><strong>Unstop</strong><small>Hackathons</small></div>
+      <div class="source-card"><span>💻</span><strong>Devfolio</strong><small>Tech Hackathons</small></div>
+      <div class="source-card"><span>🌐</span><strong>MLH</strong><small>Global Events</small></div>
+      <div class="source-card"><span>💼</span><strong>Internshala</strong><small>Internships</small></div>
+      <div class="source-card"><span>🎓</span><strong>Buddy4Study</strong><small>Scholarships</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA ──────────────────────────────────────────────────────────────────── -->
+<section class="cta-section">
+  <div class="bg-orb orb4"></div>
+  <div class="cta-inner">
+    <h2>Ready to stop missing opportunities?</h2>
+    <p>Join thousands of students using Opportunity Pulse</p>
+    <a href="{{ url_for('register') }}" class="btn btn-primary btn-xl">
+      🚀 Create Free Account
+    </a>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Animate stat counters
+document.querySelectorAll('.stat-num').forEach(el => {
+  const target = parseInt(el.dataset.target || el.textContent);
+  let current = 0;
+  const step = Math.ceil(target / 40);
+  const timer = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = current;
+    if (current >= target) clearInterval(timer);
+  }, 30);
+});
+</script>
+{% endblock %}

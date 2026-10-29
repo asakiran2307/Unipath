@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}Recruiter Inbox{% if other_user %} — {{ other_user.name }}{% endif %} — Opportunity Pulse{% endblock %}
+
+{% block content %}
+<div class="recruiter-chat-wrap">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────── -->
+  <aside class="rchat-sidebar">
+    <div class="rchat-sidebar-header">
+      <div>
+        <h2 style="font-size:1.05rem;font-weight:800;margin:0">📨 Candidate Inbox</h2>
+        <p style="font-size:.75rem;color:var(--text3);margin:.2rem 0 0">Direct messages with students</p>
+      </div>
+      <a href="{{ url_for('recruiter_talent') }}" class="btn btn-xs btn-green" title="Talent Board">🎯 Find Talent</a>
+    </div>
+
+    <div class="rchat-list">
+      {% if chat_list %}
+        {% for conv in chat_list %}
+        <a href="{{ url_for('recruiter_chat_thread', other_id=conv.other_id) }}"
+           class="rchat-conv {% if other_user and other_user.id == conv.other_id %}rconv-active{% endif %}">
+          <div class="rconv-avatar">{{ conv.other_name[0].upper() }}</div>
+          <div class="rconv-info">
+            <div class="rconv-name">
+              {{ conv.other_name }}
+              {% if conv.unread > 0 %}
+              <span class="runread-dot">{{ conv.unread }}</span>
+              {% endif %}
+            </div>
+            <div class="rconv-role">
+              {% if conv.other_role == 'student' %}🎓 Student{% else %}{{ conv.other_role | title }}{% endif %}
+            </div>
+            <div class="rconv-preview">{{ (conv.last_content or '')[:38] }}{% if (conv.last_content or '') | length > 38 %}…{% endif %}</div>
+          </div>
+          <div class="rconv-time">{{ conv.last_time[:10] if conv.last_time else '' }}</div>
+        </a>
+        {% endfor %}
+      {% else %}
+      <div class="rchat-empty-list">
+        <div style="font-size:2.5rem;margin-bottom:.75rem">📭</div>
+        <p>No conversations yet.</p>
+        <small>Go to the <a href="{{ url_for('recruiter_talent') }}" style="color:var(--accent)">Talent Board</a> to message students.</small>
+      </div>
+      {% endif %}
+    </div>
+  </aside>
+
+  <!-- ── Main chat area ─────────────────────────────────────── -->
+  <div class="rchat-main">
+    {% if other_user %}
+
+    <!-- Top bar -->
+    <div class="rchat-topbar">
+      <div class="rconv-avatar" style="width:42px;height:42px;font-size:1.1rem;flex-shrink:0">
+        {{ other_user.name[0].upper() }}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;font-size:1rem">{{ other_user.name }}</div>
+        <div style="font-size:.75rem;color:var(--text2)">
+          {% if other_user.role == 'student' %}🎓 Student Candidate{% else %}{{ other_user.role | title }}{% endif %}
+          — {{ other_user.email }}
+        </div>
+      </div>
+      <div style="display:flex;gap:.6rem;flex-shrink:0">
+        <a href="{{ url_for('recruiter_talent') }}" class="btn btn-ghost btn-sm">🎯 Talent Board</a>
+        <a href="{{ url_for('recruiter_chat_list') }}" class="btn btn-ghost btn-sm">← Inbox</a>
+      </div>
+    </div>
+
+    <!-- Candidate info strip -->
+    {% set cprofile = {} %}
+    <div class="rchat-candidate-strip">
+      <span class="rcs-pill">💼 Recruiting as: <strong>{{ current_user.organization or current_user.name }}</strong></span>
+      <span class="rcs-pill rcs-accent">You are messaging a candidate directly</span>
+    </div>
+
+    <!-- Messages -->
+    <div class="rchat-messages" id="chatMessages">
+      {% if not messages %}
+      <div class="rchat-start-hint">
+        <div style="font-size:2.5rem;margin-bottom:.5rem">👋</div>
+        <p>Start the conversation with <strong>{{ other_user.name }}</strong>.<br>
+        <small style="color:var(--text3)">Introduce yourself and your opportunity.</small></p>
+      </div>
+      {% endif %}
+      {% for msg in messages %}
+      <div class="rchat-msg {% if msg.sender_id == current_uid %}rmsg-mine{% else %}rmsg-theirs{% endif %}"
+           data-id="{{ msg.id }}">
+        {% if msg.sender_id != current_uid %}
+        <div class="rmsg-avatar">{{ other_user.name[0].upper() }}</div>
+        {% endif %}
+        <div class="rmsg-content">
+          <div class="rmsg-bubble">{{ msg.content }}</div>
+          <div class="rmsg-time">{{ msg.created_at[11:16] }}</div>
+        </div>
+        {% if msg.sender_id == current_uid %}
+        <div class="rmsg-avatar rmsg-avatar-me">{{ current_user.name[0].upper() }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Input area -->
+    <div class="rchat-input-bar">
+      <div class="rchat-input-wrap">
+        <textarea id="msgInput" class="rchat-input" placeholder="Write a professional message to {{ other_user.name }}…" rows="1" autocomplete="off"></textarea>
+        <button class="rchat-send-btn" id="sendBtn" title="Send message">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+      <div class="rchat-typing-hint" id="typingHint" style="display:none">{{ other_user.name }} is typing…</div>
+    </div>
+
+    {% else %}
+    <!-- No thread selected -->
+    <div class="rchat-placeholder">
+      <div style="font-size:4.5rem;margin-bottom:1.25rem;filter:drop-shadow(0 4px 24px rgba(99,102,241,.3))">💬</div>
+      <h3 style="font-size:1.4rem;font-weight:800;margin-bottom:.5rem">Recruiter Inbox</h3>
+      <p style="color:var(--text2);margin-bottom:1.5rem;max-width:360px;text-align:center;line-height:1.6">
+        Select a conversation from the left, or find a candidate on the Talent Board and send them a direct message.
+      </p>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center">
+        <a href="{{ url_for('recruiter_talent') }}" class="btn btn-primary">🎯 Browse Talent Board</a>
+        <a href="{{ url_for('recruiter_dashboard') }}" class="btn btn-ghost">📄 My Listings</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if other_user %}
+<script>
+const ME    = {{ current_uid | int }};
+const OTHER = {{ other_user.id | int }};
+let lastId  = {{ (messages[-1].id if messages else 0) | int }};
+const msgBox = document.getElementById('chatMessages');
+const input  = document.getElementById('msgInput');
+
+function scrollBottom() { msgBox.scrollTop = msgBox.scrollHeight; }
+scrollBottom();
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function appendMsg(msg) {
+  // Remove "start hint" if present
+  const hint = document.querySelector('.rchat-start-hint');
+  if (hint) hint.remove();
+
+  const mine = Number(msg.sender_id) === ME;
+  const div  = document.createElement('div');
+  div.className  = 'rchat-msg ' + (mine ? 'rmsg-mine' : 'rmsg-theirs');
+  div.dataset.id = msg.id;
+
+  const avatarMine   = `<div class="rmsg-avatar rmsg-avatar-me">${escHtml(msg.sender_name ? msg.sender_name[0].toUpperCase() : 'Y')}</div>`;
+  const avatarTheirs = `<div class="rmsg-avatar">${escHtml(msg.sender_name ? msg.sender_name[0].toUpperCase() : '?')}</div>`;
+
+  div.innerHTML = `
+    ${mine ? '' : avatarTheirs}
+    <div class="rmsg-content">
+      <div class="rmsg-bubble">${escHtml(msg.content)}</div>
+      <div class="rmsg-time">${(msg.created_at || '').slice(11, 16)}</div>
+    </div>
+    ${mine ? avatarMine : ''}
+  `;
+  msgBox.appendChild(div);
+  scrollBottom();
+}
+
+// Auto-resize textarea
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+});
+
+async function sendMsg() {
+  const text = input.value.trim();
+  if (!text) return;
+  const sendBtn = document.getElementById('sendBtn');
+  sendBtn.disabled = true;
+  input.value = '';
+  input.style.height = 'auto';
+
+  try {
+    const res  = await fetch('/chat/send', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({receiver_id: OTHER, content: text})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      appendMsg(data.msg);
+      lastId = data.msg.id;
+    } else {
+      input.value = text; // put text back
+      alert('Message failed: ' + (data.error || 'unknown error'));
+    }
+  } catch(e) {
+    input.value = text;
+    console.error('Send failed:', e);
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+async function poll() {
+  try {
+    const res  = await fetch(`/chat/poll/${OTHER}?after=${lastId}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.messages && data.messages.length > 0) {
+      data.messages.forEach(m => {
+        // Don't duplicate messages we sent ourselves
+        if (!msgBox.querySelector(`[data-id="${m.id}"]`)) {
+          appendMsg(m);
+          lastId = m.id;
+        }
+      });
+    }
+  } catch(e) { /* silent */ }
+}
+setInterval(poll, 2500);
+
+document.getElementById('sendBtn').addEventListener('click', sendMsg);
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+});
+</script>
+{% endif %}
+{% endblock %}

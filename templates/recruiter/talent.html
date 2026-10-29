@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Talent Board — Opportunity Pulse{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+  <div class="bg-orb orb1"></div>
+
+  <div class="dash-header" style="flex-wrap:wrap;gap:1rem">
+    <div>
+      <h1>🎯 Talent Board</h1>
+      <p style="color:var(--text2)">Skill-verified students — AI assessed or course completed — ready to hire.</p>
+    </div>
+    <a href="{{ url_for('recruiter_dashboard') }}" class="btn btn-ghost">← Dashboard</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="dash-stats" style="margin-bottom:2rem">
+    <div class="stat-card">
+      <div class="stat-num-lg" style="-webkit-text-fill-color:var(--accent)">{{ students | length }}</div>
+      <div style="color:var(--text2);font-size:.85rem">Total Ready</div>
+    </div>
+    <div class="stat-card stat-green">
+      <div class="stat-num-lg" style="-webkit-text-fill-color:var(--emerald)">
+        {{ students | selectattr('passed') | list | length }}
+      </div>
+      <div style="color:var(--text2);font-size:.85rem">✅ AI Verified (Quiz Passed)</div>
+    </div>
+    <div class="stat-card stat-amber">
+      <div class="stat-num-lg" style="-webkit-text-fill-color:var(--amber)">
+        {{ students | selectattr('course_completed') | list | length }}
+      </div>
+      <div style="color:var(--text2);font-size:.85rem">📚 Course Completed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num-lg" style="-webkit-text-fill-color:var(--cyan)">{{ all_skills | length }}</div>
+      <div style="color:var(--text2);font-size:.85rem">Unique Skills</div>
+    </div>
+  </div>
+
+  <!-- My listings panel -->
+  {% if my_opps %}
+  <div class="my-listings-panel">
+    <strong style="font-size:.85rem;color:var(--text2);display:block;margin-bottom:.6rem">YOUR LIVE LISTINGS — Students are matched:</strong>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+      {% for opp in my_opps %}
+      <a href="{{ url_for('recruiter_talent', skill=opp.title.split()[0]) }}"
+         class="my-pool-pill" style="text-decoration:none">
+        <span class="cat-badge cat-{{ opp.category }}">{{ opp.category | title }}</span>
+        {{ opp.title[:50] }}{% if opp.title|length > 50 %}…{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Filters -->
+  <div class="talent-filters" style="margin-bottom:1rem">
+    <form method="GET" action="{{ url_for('recruiter_talent') }}" class="filter-form-inline">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" name="skill" class="search-input"
+               placeholder="Filter by skill (Python, React, ML...)"
+               value="{{ active_skill or '' }}" />
+      </div>
+      <select name="status" class="form-input form-select" style="width:auto">
+        <option value="all" {% if active_status=='all' %}selected{% endif %}>All Students</option>
+        <option value="verified" {% if active_status=='verified' %}selected{% endif %}>✅ Quiz Verified Only</option>
+        <option value="course_done" {% if active_status=='course_done' %}selected{% endif %}>📚 Course Completed</option>
+      </select>
+      <select name="min_score" class="form-input form-select" style="width:auto">
+        <option value="0"  {% if min_score == 0  %}selected{% endif %}>Any Score</option>
+        <option value="7"  {% if min_score == 7  %}selected{% endif %}>Min 7+</option>
+        <option value="8"  {% if min_score == 8  %}selected{% endif %}>Min 8+</option>
+        <option value="9"  {% if min_score == 9  %}selected{% endif %}>Min 9+</option>
+        <option value="10" {% if min_score == 10 %}selected{% endif %}>Perfect 10</option>
+      </select>
+      <button class="btn btn-primary" type="submit">Filter</button>
+      {% if active_skill %}<a href="{{ url_for('recruiter_talent') }}" class="btn btn-ghost">Clear</a>{% endif %}
+    </form>
+  </div>
+
+  <!-- Skill cloud -->
+  {% if all_skills %}
+  <div class="skill-cloud">
+    {% for sk in all_skills[:24] %}
+    <a href="{{ url_for('recruiter_talent', skill=sk, status=active_status) }}"
+       class="skill-cloud-tag {% if active_skill == sk %}sc-active{% endif %}">
+      {{ sk }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if students %}
+  <!-- Talent table -->
+  <div class="listings-table-wrap">
+    <table class="listings-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Status</th>
+          <th>Top Skills</th>
+          <th>Score</th>
+          <th>College / Year</th>
+          <th>Links</th>
+          <th>Resume</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td>
+            <div class="table-title">{{ s.name }}</div>
+            <div class="table-sub">{{ s.email }}</div>
+            {% if s.branch %}<div class="table-sub">{{ s.branch }}</div>{% endif %}
+          </td>
+          <td>
+            {% if s.passed %}
+            <span class="talent-status-badge ts-verified">✅ AI Verified</span>
+            {% elif s.course_completed %}
+            <span class="talent-status-badge ts-course">📚 Course Done</span>
+            {% else %}
+            <span class="talent-status-badge ts-resume">📄 Resume</span>
+            {% endif %}
+            {% if s.is_job_seeking %}
+            <div style="margin-top:.3rem">
+              <span class="talent-status-badge ts-seeking">🟢 Open to Work</span>
+            </div>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display:flex;flex-wrap:wrap;gap:.3rem;max-width:260px">
+              {% set display_skills = s.strong_skills if s.strong_skills else s.resume_skills %}
+              {% for skill in display_skills[:5] %}
+              <span class="tag" style="font-size:.7rem">{{ skill }}</span>
+              {% endfor %}
+            </div>
+          </td>
+          <td>
+            {% if s.passed and s.score > 0 %}
+            <div class="score-circle {% if s.score >= 9 %}sc-gold{% elif s.score >= 7 %}sc-green{% else %}sc-amber{% endif %}">
+              {{ s.score }}/{{ s.total }}
+            </div>
+            {% elif s.course_completed %}
+            <div style="font-size:1.5rem;text-align:center">📚</div>
+            {% else %}
+            <span style="color:var(--text3);font-size:.8rem">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="table-title">{{ s.college or '—' }}</div>
+            <div class="table-sub">{{ s.year or '—' }}</div>
+          </td>
+          <td>
+            <div class="table-actions">
+              {% if s.linkedin %}
+              <a href="{{ s.linkedin }}" target="_blank" class="btn btn-xs btn-green">LinkedIn ↗</a>
+              {% endif %}
+              {% if s.github %}
+              <a href="{{ s.github }}" target="_blank" class="btn btn-xs">GitHub ↗</a>
+              {% endif %}
+              {% if not s.linkedin and not s.github %}
+              <span style="color:var(--text3);font-size:.8rem">—</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            {% if s.resume_path %}
+            <a href="{{ url_for('static', filename='uploads/resumes/' + s.resume_path.split('/')[-1].split('\\')[-1]) }}"
+               target="_blank" class="btn btn-xs btn-amber-sm">
+              📄 Resume
+            </a>
+            {% else %}
+            <span style="color:var(--text3);font-size:.8rem">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('recruiter_chat_thread', other_id=s.id) }}"
+               class="btn btn-xs btn-green">💬 Chat</a>
+            {% if s.assessed_at %}
+            <div class="log-time" style="margin-top:.3rem">{{ s.assessed_at[:10] }}</div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <h3>No students yet</h3>
+    <p>Students who pass the AI quiz OR complete a learning module appear here automatically.</p>
+    {% if active_skill %}
+    <a href="{{ url_for('recruiter_talent') }}" class="btn btn-ghost">Clear filter</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

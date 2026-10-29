@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="profile-page" style="padding-top: 2rem;">
+  <div class="bg-orb orb1"></div>
+  <div class="li-profile-container">
+
+    <form method="POST" action="{{ url_for('student_profile') }}" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:1.25rem;">
+      
+      <!-- ── Header Card ──────────────────────────────── -->
+      <div class="li-card li-header-card">
+        <div class="li-banner"></div>
+        <div class="li-header-content">
+          <div class="li-avatar" style="overflow:hidden; display:flex; justify-content:center; align-items:center;">
+            {% if profile.get('avatar') %}
+            <img src="{{ url_for('uploaded_file', filename=profile.avatar) }}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;">
+            {% else %}
+            {{ current_user.name[0].upper() }}
+            {% endif %}
+          </div>
+          <div class="li-header-info">
+            <h1>{{ current_user.name }}</h1>
+            <p class="li-headline">
+              {{ profile.get('branch', 'Student') }} {% if profile.get('college') %}at {{ profile.get('college') }}{% endif %}
+              {% if profile.get('year') %} • {{ profile.get('year') }}{% endif %}
+            </p>
+            <p class="li-location">📍 {{ profile.get('location', 'Global Location') }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── About & Academics ──────────────────────────────── -->
+      <div class="li-card">
+        <div class="li-section-content">
+          <h3 class="li-section-title">📚 Academic Info & Profile Picture</h3>
+          <div class="form-row" style="margin-bottom: 1rem;">
+            <div class="form-group" style="width: 100%;">
+              <label for="avatar">Profile Picture</label>
+              <input type="file" id="avatar" name="avatar" class="form-input" accept="image/*" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="year">Year of Study</label>
+              <select id="year" name="year" class="form-input form-select">
+                <option value="">Select Year</option>
+                {% for y in years %}
+                <option value="{{ y }}" {% if profile.get('year') == y %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="branch">Branch / Department</label>
+              <select id="branch" name="branch" class="form-input form-select">
+                <option value="">Select Branch</option>
+                {% for b in branches %}
+                <option value="{{ b }}" {% if profile.get('branch') == b %}selected{% endif %}>{{ b }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-row" style="margin-top:1rem;">
+            <div class="form-group">
+              <label for="college">College / University</label>
+              <input type="text" id="college" name="college" class="form-input"
+                     placeholder="e.g. IIIT Hyderabad" value="{{ profile.get('college', '') }}" />
+            </div>
+            <div class="form-group">
+              <label for="location">City / Location</label>
+              <input type="text" id="location" name="location" class="form-input"
+                     placeholder="e.g. Hyderabad" value="{{ profile.get('location', '') }}" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Interests & Skills ──────────────────────────────── -->
+      <div class="li-card">
+        <div class="li-section-content">
+          <h3 class="li-section-title">🎯 Interests & Core Skills</h3>
+          <p class="form-hint" style="margin-top:-0.5rem; margin-bottom:1.5rem;">Select your interest areas to power your personalized AI dashboard.</p>
+          <div class="interest-grid">
+            {% for tag in interest_tags %}
+            <label class="interest-chip">
+              <input type="checkbox" name="interests" value="{{ tag }}"
+                     {% if tag in profile.get('interests', []) %}checked{% endif %} />
+              <span>{{ tag }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          <div class="form-group" style="margin-top:2rem">
+            <label for="skills">Technical Skills (comma-separated)</label>
+            <input type="text" id="skills" name="skills" class="form-input"
+                   placeholder="Python, React, TensorFlow, SQL…"
+                   value="{{ profile.get('skills', [])|join(', ') }}" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Goals ──────────────────────────────── -->
+      <div class="li-card">
+        <div class="li-section-content">
+          <h3 class="li-section-title">🔍 Opportunity Goals</h3>
+          <div class="pref-grid">
+            {% for cat in ['hackathon', 'internship', 'scholarship', 'workshop', 'job'] %}
+            <label class="interest-chip">
+              <input type="checkbox" name="preferred_categories" value="{{ cat }}"
+                     {% if cat in profile.get('preferred_categories', []) %}checked{% endif %} />
+              <span>
+                {% if cat == 'hackathon' %}🏆 Hackathons
+                {% elif cat == 'internship' %}💼 Internships
+                {% elif cat == 'scholarship' %}🎓 Scholarships
+                {% elif cat == 'workshop' %}🔧 Workshops
+                {% else %}🚀 Jobs{% endif %}
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Socials ──────────────────────────────── -->
+      <div class="li-card">
+        <div class="li-section-content">
+          <h3 class="li-section-title">🔗 Social Links</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="linkedin">LinkedIn URL</label>
+              <input type="url" id="linkedin" name="linkedin" class="form-input"
+                     placeholder="https://linkedin.com/in/your-id"
+                     value="{{ profile.get('linkedin', '') }}" />
+            </div>
+            <div class="form-group">
+              <label for="github">GitHub URL</label>
+              <input type="url" id="github" name="github" class="form-input"
+                     placeholder="https://github.com/your-id"
+                     value="{{ profile.get('github', '') }}" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions" style="margin-bottom:3rem; margin-top:0.5rem; justify-content:space-between;">
+        <a href="{{ url_for('student_feed') }}" class="btn btn-ghost" style="color:var(--text3)">← Cancel</a>
+        <button type="submit" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1.05rem;">💾 Save Profile</button>
+      </div>
+      
+    </form>
+  </div>
+</div>
+{% endblock %}

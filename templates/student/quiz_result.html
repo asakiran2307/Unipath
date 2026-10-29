@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Quiz Result — Opportunity Pulse{% endblock %}
+
+{% block content %}
+<div class="result-page">
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+  {% if result.passed %}
+  <div id="confettiCanvas" class="confetti-canvas"></div>
+  {% endif %}
+
+  <div class="result-container">
+    <!-- Score card -->
+    <div class="score-card {% if result.passed %}score-pass{% else %}score-fail{% endif %}">
+      <div class="score-icon">{{ '🎉' if result.passed else '📚' }}</div>
+      <div class="score-display">
+        <span class="score-num" id="scoreNum">0</span>
+        <span class="score-sep">/</span>
+        <span class="score-den">{{ result.total }}</span>
+      </div>
+      <div class="score-pct">{{ result.percentage }}%</div>
+      <div class="score-verdict">
+        {% if result.passed %}
+          You Passed! Skills Verified ✓
+        {% else %}
+          Keep Going — Learning Path Ready!
+        {% endif %}
+      </div>
+      <div class="score-attempt">Attempt #{{ attempt_count }}</div>
+    </div>
+
+    {% if result.passed %}
+    <!-- PASS: Skill strength summary -->
+    <div class="result-section">
+      <h2>Your Skill Strengths</h2>
+      <div class="skill-breakdown-grid">
+        {% for skill, data in result.skill_breakdown.items() %}
+        <div class="skill-score-card {% if data.strong %}skill-strong{% else %}skill-weak{% endif %}">
+          <div class="ss-name">{{ skill }}</div>
+          <div class="ss-bar-wrap">
+            <div class="ss-bar" data-width="{{ data.pct }}%"></div>
+          </div>
+          <div class="ss-meta">{{ data.correct }}/{{ data.total }} correct</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="result-actions">
+      <a href="{{ url_for('student_feed') }}" class="btn btn-primary btn-xl">
+        View My Personalized Feed →
+      </a>
+    </div>
+
+    {% else %}
+    <!-- FAIL: Show weak areas + CTA to learning path -->
+    <div class="result-section">
+      <div class="fail-banner">
+        <strong>Score needed: 7/10 &nbsp;|&nbsp; Your score: {{ result.score }}/{{ result.total }}</strong>
+        <p>No worries! You're {{ 7 - result.score }} question{{ 's' if (7 - result.score) != 1 else '' }} away from passing. Watch the learning videos and retake.</p>
+      </div>
+
+      {% if result.weak_skills %}
+      <h3>Areas to Improve</h3>
+      <div class="skill-breakdown-grid">
+        {% for skill, data in result.skill_breakdown.items() %}
+        <div class="skill-score-card {% if data.strong %}skill-strong{% else %}skill-weak{% endif %}">
+          <div class="ss-name">{{ skill }} {% if not data.strong %}<span class="weak-tag">Needs work</span>{% endif %}</div>
+          <div class="ss-bar-wrap">
+            <div class="ss-bar {% if not data.strong %}bar-weak{% endif %}" data-width="{{ data.pct }}%"></div>
+          </div>
+          <div class="ss-meta">{{ data.correct }}/{{ data.total }} correct</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if result.incorrect %}
+      <h3>Review These Questions</h3>
+      <div class="incorrect-list">
+        {% for item in result.incorrect[:5] %}
+        <div class="incorrect-item">
+          <div class="incorrect-q">{{ item.question }}</div>
+          <div class="incorrect-ans">
+            <span class="your-ans">Your answer: <em>{{ item.your_answer }}</em></span>
+            <span class="correct-ans">Correct: <strong>{{ item.correct_answer }}</strong></span>
+          </div>
+          {% if item.explanation %}
+          <div class="incorrect-exp">{{ item.explanation }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="result-actions">
+      <a href="{{ url_for('student_learning') }}" class="btn btn-primary btn-xl">
+        Start Learning Path →
+      </a>
+      <a href="{{ url_for('student_quiz') }}" class="btn btn-ghost">
+        Retake Quiz
+      </a>
+      <a href="{{ url_for('student_feed') }}" class="btn btn-ghost">
+        Browse Feed Anyway
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+// Set dynamic widths
+document.querySelectorAll('[data-width]').forEach(el => {
+  el.style.width = el.getAttribute('data-width');
+});
+
+// Animate score counter
+const final = Number("{{ result.score }}");
+let count = 0;
+const el = document.getElementById('scoreNum');
+const timer = setInterval(() => {
+  if (count >= final) { el.textContent = final; clearInterval(timer); return; }
+  count++;
+  el.textContent = count;
+}, 120);
+
+// {% if result.passed %}
+// Confetti
+function makeConfetti() {
+  const colors = ['#6366f1','#a855f7','#06b6d4','#10b981','#f59e0b'];
+  const canvas = document.getElementById('confettiCanvas');
+  for (let i = 0; i < 80; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = `left:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*colors.length)]};animation-delay:${Math.random()*2}s;animation-duration:${2+Math.random()*2}s;width:${6+Math.random()*6}px;height:${6+Math.random()*6}px;border-radius:${Math.random()>0.5?'50%':'2px'}`;
+    canvas.appendChild(el);
+  }
+  setTimeout(() => canvas.innerHTML = '', 5000);
+}
+makeConfetti();
+// {% endif %}
+</script>
+{% endblock %}

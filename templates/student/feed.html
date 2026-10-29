@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+{% block title %}My Opportunity Feed{% endblock %}
+
+{% block content %}
+<div class="feed-layout">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <aside class="feed-sidebar">
+    <div class="sidebar-section">
+      <h3 class="sidebar-title">🎯 Your Profile</h3>
+      {% if profile %}
+      <div class="profile-mini">
+        <div class="profile-avatar-lg">{{ user.name[0].upper() }}</div>
+        <div>
+          <div class="profile-name-mini">{{ user.name }}</div>
+          <div class="profile-detail-mini">{{ profile.year or '—' }} • {{ profile.branch or '—' }}</div>
+          <div class="profile-detail-mini">{{ profile.college or '' }}</div>
+        </div>
+        <a href="{{ url_for('student_profile') }}" class="edit-profile-btn" title="Edit Profile">✏️</a>
+      </div>
+      {% if profile.interests %}
+      <div class="profile-interests">
+        {% for interest in profile.interests[:4] %}
+        <span class="tag">{{ interest }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="profile-empty-sidebar">
+        <p>Set your profile for AI-personalized results!</p>
+        <a href="{{ url_for('student_profile') }}" class="btn btn-primary btn-sm">Setup Profile →</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="sidebar-section">
+      <h3 class="sidebar-title">📂 Category</h3>
+      <div class="filter-pills">
+        <a href="{{ url_for('student_feed', category='all', reward_type=active_reward, min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill {% if active_category == 'all' %}active{% endif %}">
+          All <span class="pill-count">{{ total }}</span>
+        </a>
+        <a href="{{ url_for('student_feed', category='hackathon', reward_type=active_reward, min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill cat-hackathon {% if active_category == 'hackathon' %}active{% endif %}">
+          🏆 Hackathons
+        </a>
+        <a href="{{ url_for('student_feed', category='internship', reward_type=active_reward, min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill cat-internship {% if active_category == 'internship' %}active{% endif %}">
+          💼 Internships
+        </a>
+        <a href="{{ url_for('student_feed', category='scholarship', reward_type=active_reward, min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill cat-scholarship {% if active_category == 'scholarship' %}active{% endif %}">
+          🎓 Scholarships
+        </a>
+        <a href="{{ url_for('student_feed', category='workshop', reward_type=active_reward, min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill cat-workshop {% if active_category == 'workshop' %}active{% endif %}">
+          🔧 Workshops
+        </a>
+        <a href="{{ url_for('student_feed', category='job', reward_type=active_reward, min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill cat-job {% if active_category == 'job' %}active{% endif %}">
+          🚀 Jobs
+        </a>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3 class="sidebar-title">💰 Reward Type</h3>
+      <div class="filter-pills">
+        <a href="{{ url_for('student_feed', category=active_category, reward_type='all', min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill {% if active_reward == 'all' %}active{% endif %}">All</a>
+        <a href="{{ url_for('student_feed', category=active_category, reward_type='cash', min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill {% if active_reward == 'cash' %}active{% endif %}">💰 Cash Prize</a>
+        <a href="{{ url_for('student_feed', category=active_category, reward_type='stipend', min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill {% if active_reward == 'stipend' %}active{% endif %}">💼 Stipend</a>
+        <a href="{{ url_for('student_feed', category=active_category, reward_type='certificate', min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill {% if active_reward == 'certificate' %}active{% endif %}">🏅 Certificate</a>
+        <a href="{{ url_for('student_feed', category=active_category, reward_type='free', min_prize=min_prize, q=search, sort=sort) }}"
+           class="filter-pill {% if active_reward == 'free' %}active{% endif %}">🎁 Free</a>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3 class="sidebar-title">🏆 Min Prize (Cash)</h3>
+      <div class="filter-pills">
+        {% for pf in prize_filters %}
+        <a href="{{ url_for('student_feed', category=active_category, reward_type=active_reward, min_prize=pf.min, q=search, sort=sort) }}"
+           class="filter-pill {% if min_prize == pf.min %}active{% endif %}">{{ pf.label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3 class="sidebar-title">🔀 Sort By</h3>
+      <div class="filter-pills">
+        <a href="{{ url_for('student_feed', category=active_category, reward_type=active_reward, min_prize=min_prize, q=search, sort='deadline_asc') }}"
+           class="filter-pill {% if sort == 'deadline_asc' %}active{% endif %}">⏰ Deadline</a>
+        <a href="{{ url_for('student_feed', category=active_category, reward_type=active_reward, min_prize=min_prize, q=search, sort='newest') }}"
+           class="filter-pill {% if sort == 'newest' %}active{% endif %}">🆕 Newest</a>
+        <a href="{{ url_for('student_feed', category=active_category, reward_type=active_reward, min_prize=min_prize, q=search, sort='prize_desc') }}"
+           class="filter-pill {% if sort == 'prize_desc' %}active{% endif %}">💰 Prize ↓</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Feed ───────────────────────────────────────────────────────── -->
+  <div class="feed-main">
+
+    <!-- ── Sponsored Ads Carousel ──────────────────────────────────── -->
+    {% if ads %}
+    <div class="ads-carousel" id="adsCarousel">
+      <div class="ads-carousel-inner" id="adsInner">
+        {% for ad in ads %}
+        <div class="ad-slide {% if loop.first %}active{% endif %}">
+          <a href="{{ ad.target_link }}" target="_blank">
+            <img src="{{ ad.image_url }}" alt="{{ ad.title }}" class="ad-banner-img" onerror="this.src='https://via.placeholder.com/800x120?text=Sponsor+Ad';">
+            <div class="ad-overlay">
+              <span class="ad-badge">Sponsored</span>
+              <span class="ad-title">{{ ad.title }}</span>
+            </div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+      <!-- Dots -->
+      <div class="ads-indicators">
+        {% for ad in ads %}
+        <span class="ad-dot {% if loop.first %}active{% endif %}" onclick="goToAd('{{ loop.index0 }}')"></span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Assessment Banner -->
+    {% if assessment_status == 'none' %}
+    <div class="assessment-banner banner-quiz">
+      <div class="ab-icon">📄</div>
+      <div class="ab-content">
+        <strong>Upload your resume to unlock your personalized feed!</strong>
+        <span>AI will extract your skills and show only relevant opportunities.</span>
+      </div>
+      <a href="{{ url_for('student_onboarding') }}" class="btn btn-primary btn-sm">Upload Resume →</a>
+    </div>
+    {% elif assessment_status == 'quiz_pending' %}
+    <div class="assessment-banner banner-quiz">
+      <div class="ab-icon">📝</div>
+      <div class="ab-content">
+        <strong>Take your 10-question AI quiz to get a fully personalized feed!</strong>
+        <span>Skills detected: {{ student_skills | join(', ') }}</span>
+      </div>
+      <a href="{{ url_for('student_quiz') }}" class="btn btn-primary btn-sm">Start Quiz →</a>
+    </div>
+    {% elif assessment_status == 'learning' %}
+    <div class="assessment-banner banner-learn">
+      <div class="ab-icon">📚</div>
+      <div class="ab-content">
+        <strong>Score was {{ assessment.score }}/10. Complete 1 learning module and retake!</strong>
+        <span>Feed below is filtered by your skills. Complete learning path to verify skills.</span>
+      </div>
+      <a href="{{ url_for('student_learning') }}" class="btn btn-amber btn-sm">Continue Learning →</a>
+    </div>
+    {% elif assessment_status == 'passed' and student_skills %}
+    <div class="assessment-banner banner-pass">
+      <div class="ab-icon">✅</div>
+      <div class="ab-content">
+        <strong>Skills verified! Showing opportunities matched to your skills.</strong>
+        <span>Matched: {{ student_skills | join(' · ') }}</span>
+      </div>
+      <a href="{{ url_for('student_quiz') }}" class="btn btn-ghost btn-sm">Retake Quiz</a>
+    </div>
+    {% endif %}
+
+    <!-- Search bar -->
+    <div class="feed-topbar">
+      <form action="{{ url_for('student_feed') }}" method="GET" class="search-form" id="searchForm">
+        <input type="hidden" name="category" value="{{ active_category }}" />
+        <input type="hidden" name="reward_type" value="{{ active_reward }}" />
+        <input type="hidden" name="min_prize" value="{{ min_prize }}" />
+        <input type="hidden" name="sort" value="{{ sort }}" />
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" name="q" id="searchInput" class="search-input"
+                 placeholder="Search hackathons, internships, companies…"
+                 value="{{ search }}" autocomplete="off" />
+          {% if search %}
+          <a href="{{ url_for('student_feed', category=active_category, reward_type=active_reward, min_prize=min_prize, sort=sort) }}"
+             class="clear-search">✕</a>
+          {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      </form>
+
+      <div class="feed-info">
+        {% if search %}
+          <span class="result-count">{{ total }} results for "<em>{{ search }}</em>"</span>
+        {% elif profile %}
+          <span class="result-count">🤖 AI-personalized • {{ total }} opportunities</span>
+        {% else %}
+          <span class="result-count">{{ total }} opportunities</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    {% if not opportunities %}
+    <div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <h3>No opportunities found</h3>
+      <p>Try changing the filters or search term</p>
+      <a href="{{ url_for('student_feed') }}" class="btn btn-primary btn-sm">Clear Filters</a>
+    </div>
+    {% endif %}
+
+    <!-- Opportunity cards -->
+    <div class="feed-cards" id="feedCards">
+      {% for opp in opportunities %}
+      <div class="opp-card feed-card category-{{ opp.category }}"
+           data-id="{{ opp.id }}"
+           data-category="{{ opp.category }}"
+           data-reward="{{ opp.reward_type }}">
+
+        <!-- Card Header -->
+        <div class="card-top">
+          <div class="card-badges">
+            <span class="cat-badge cat-{{ opp.category }}">{{ opp.category | title }}</span>
+            {% if opp.reward_type == 'cash' %}
+              <span class="reward-badge reward-cash">💰 Cash Prize</span>
+            {% elif opp.reward_type == 'stipend' %}
+              <span class="reward-badge reward-stipend">💼 Stipend</span>
+            {% elif opp.reward_type == 'free' %}
+              <span class="reward-badge reward-free">🎁 Free</span>
+            {% else %}
+              <span class="reward-badge reward-cert">🏅 Certificate</span>
+            {% endif %}
+            {% if opp.is_featured %}
+              <span class="featured-badge">⭐ Featured</span>
+            {% endif %}
+          </div>
+
+          <div class="card-right-badges">
+            {% if opp.days_left is not none %}
+            <div class="deadline-chip chip-{{ opp.deadline_color }}">
+              ⏰ {{ opp.deadline_label }}
+            </div>
+            {% else %}
+            <div class="deadline-chip chip-muted">🔄 Rolling</div>
+            {% endif %}
+
+            <!-- Save button -->
+            <button class="save-btn {% if opp.id in saved_ids %}saved{% endif %}"
+                    id="saveBtn{{ opp.id }}"
+                    onclick="toggleSave('{{ opp.id }}', this)"
+                    title="{% if opp.id in saved_ids %}Unsave{% else %}Save{% endif %}">
+              {% if opp.id in saved_ids %}💾{% else %}🔖{% endif %}
+            </button>
+          </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="card-body">
+          <h3 class="card-title">{{ opp.title }}</h3>
+          <div class="card-company">
+            <span>🏢</span> {{ opp.company or opp.source }}
+            <span class="source-chip">via {{ opp.source }}</span>
+          </div>
+
+          <div class="card-reward-row">
+            <span class="card-reward-value">{{ opp.reward }}</span>
+          </div>
+
+          <p class="card-desc">{{ opp.description[:160] }}{% if opp.description|length > 160 %}…{% endif %}</p>
+
+          <div class="card-meta-row">
+            <span class="meta-item">📍 {{ opp.location }}</span>
+            <span class="meta-sep">•</span>
+            <span class="meta-item">👤 {{ opp.eligibility[:50] }}{% if opp.eligibility|length > 50 %}…{% endif %}</span>
+          </div>
+
+          {% if opp._relevance_score is defined %}
+          <div class="relevance-bar" title="AI match score: {{ (opp._relevance_score * 100)|int }}%">
+            <span class="relevance-label">🤖 Match</span>
+            <div class="relevance-track">
+              <div class="relevance-fill" data-width="{{ ((opp._relevance_score * 100)|int) }}%"></div>
+            </div>
+            <span class="relevance-pct">{{ (opp._relevance_score * 100)|int }}%</span>
+          </div>
+          {% endif %}
+
+          {% if opp.tags %}
+          <div class="card-tags">
+            {% for tag in opp.tags[:5] %}
+            <span class="tag">{{ tag }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Card Footer -->
+        <div class="card-footer">
+          {% if opp.deadline %}
+          <div class="countdown-display" id="countdown{{ opp.id }}" data-deadline="{{ opp.deadline }}">
+            Loading…
+          </div>
+          {% else %}
+          <div class="countdown-display muted-count">No deadline • Apply anytime</div>
+          {% endif %}
+
+          <a href="{{ opp.apply_link }}" target="_blank" rel="noopener"
+             class="card-apply-btn" id="apply{{ opp.id }}">
+            Apply Now →
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Save toggle ──────────────────────────────────────────────────────────────
+async function toggleSave(id, btn) {
+  const res = await fetch(`/student/save/${id}`, {method:'POST'});
+  const data = await res.json();
+  if (data.saved) {
+    btn.textContent = '💾';
+    btn.classList.add('saved');
+    btn.title = 'Unsave';
+  } else {
+    btn.textContent = '🔖';
+    btn.classList.remove('saved');
+    btn.title = 'Save';
+  }
+  showToast(data.msg);
+}
+
+// ── Countdown timers ─────────────────────────────────────────────────────────
+function updateCountdowns() {
+  document.querySelectorAll('.countdown-display[data-deadline]').forEach(el => {
+    const dl = new Date(el.dataset.deadline + 'T23:59:59');
+    const now = new Date();
+    const diff = dl - now;
+    if (diff <= 0) {
+      el.textContent = '⏰ Deadline passed';
+      el.classList.add('expired-count');
+      return;
+    }
+    const days = Math.floor(diff / 86400000);
+    const hrs = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    if (days > 0)
+      el.textContent = `⏳ ${days}d ${hrs}h ${mins}m remaining`;
+    else if (hrs > 0)
+      el.textContent = `🔴 ${hrs}h ${mins}m ${secs}s — Closing soon!`;
+    else
+      el.textContent = `🔴 ${mins}m ${secs}s — Last chance!`;
+  });
+}
+updateCountdowns();
+setInterval(updateCountdowns, 1000);
+
+// ── Toast helper ─────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 2500);
+}
+
+// ── Live search debounce ─────────────────────────────────────────────────────
+let searchTimer;
+document.getElementById('searchInput')?.addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    document.getElementById('searchForm').requestSubmit();
+  }, 600);
+});
+
+// Set dynamic widths
+document.querySelectorAll('[data-width]').forEach(el => {
+  el.style.width = el.getAttribute('data-width');
+});
+
+// ── Ads Carousel Auto-Changer ─────────────────────────────────────────────────
+const adSlides = document.querySelectorAll('.ad-slide');
+const adDots = document.querySelectorAll('.ad-dot');
+let currentAd = 0;
+let adInterval;
+
+function goToAd(index) {
+  if (adSlides.length === 0) return;
+  adSlides[currentAd].classList.remove('active');
+  if(adDots[currentAd]) adDots[currentAd].classList.remove('active');
+  currentAd = index % adSlides.length;
+  adSlides[currentAd].classList.add('active');
+  if(adDots[currentAd]) adDots[currentAd].classList.add('active');
+}
+
+function nextAd() {
+  goToAd(currentAd + 1);
+}
+
+if (adSlides.length > 1) {
+  adInterval = setInterval(nextAd, 5000); // changes every 5s
+  
+  // Pause on hover
+  const carousel = document.getElementById('adsCarousel');
+  carousel.addEventListener('mouseenter', () => clearInterval(adInterval));
+  carousel.addEventListener('mouseleave', () => adInterval = setInterval(nextAd, 5000));
+}
+</script>
+{% endblock %}
